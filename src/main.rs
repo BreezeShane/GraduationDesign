@@ -2,7 +2,7 @@ use axum::{
     routing::get,
     Router,
 };
-use bb8::{Pool, PooledConnection};
+use bb8::Pool; // PooledConnection
 use bb8_postgres::PostgresConnectionManager;
 use tokio_postgres::NoTls;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
