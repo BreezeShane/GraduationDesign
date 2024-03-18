@@ -6,3 +6,18 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+axum = { version = "0.7.4", features = ["ws"]}
+tokio = { version = "1.36.0", features = ["full"] }
+tower = "0.4.13"
+
+bb8 = "0.8.3"
+bb8-postgres = "0.8.1"
+tokio-postgres = "0.7.10"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+parking_lot = "0.12.1"
+# actix-web = "4"
+# postgres = "0.19.7"
+# actix-rt = "2.9.0"
+# deadpool-postgres="0.12.1"
+# tokio-postgres="0.7.10"
