@@ -493,6 +493,7 @@ dependencies = [
  "bb8",
  "bb8-postgres",
  "parking_lot",
+ "postgres",
  "tokio",
  "tokio-postgres",
  "tower",
@@ -719,6 +720,20 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
+
+[[package]]
+name = "postgres"
+version = "0.19.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7915b33ed60abc46040cbcaa25ffa1c7ec240668e0477c4f3070786f5916d451"
+dependencies = [
+ "bytes",
+ "fallible-iterator",
+ "futures-util",
+ "log",
+ "tokio",
+ "tokio-postgres",
+]
 
 [[package]]
 name = "postgres-protocol"

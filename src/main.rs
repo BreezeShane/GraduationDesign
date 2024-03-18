@@ -7,7 +7,7 @@ use bb8_postgres::PostgresConnectionManager;
 use tokio_postgres::NoTls;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-pub mod postgresql;
+// pub mod postgresql;
 pub mod authenticator;
 pub mod cache;
 pub mod dataset_io;
@@ -28,13 +28,16 @@ async fn main() {
         .init();
 
     // set up connection pool
-    let manager =
-        PostgresConnectionManager::new_from_stringlike("host=localhost user=postgres", NoTls)
-            .unwrap();
-    let pool = Pool::builder().build(manager).await.unwrap();
+    let manager: PostgresConnectionManager<NoTls> =
+        PostgresConnectionManager::new_from_stringlike("
+        host=localhost user=postgres password=postgres dbname=InsectSys
+        ", NoTls).unwrap();
+    
+    let pool: Pool<PostgresConnectionManager<NoTls>> = 
+        Pool::builder().build(manager).await.unwrap();
 
     // build our application with a single route
-    let app = Router::new()
+    let app = Router::new() 
         .route("/", get(|| async { "Hello, World!" }))
         .route("/sign_in", get(|| async { "Hello, World!" }))
         .route("/sign_up", get(|| async { "Hello, World!" }))
