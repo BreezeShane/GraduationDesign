@@ -1,10 +1,10 @@
 use postgres::{Client, NoTls, Error};
 
 fn main() -> Result<(), Error> {
-    let mut cli = Client::connect("postgresql://postgres:postgres@localhost/library", NoTls)?;
+    let mut cli = Client::connect("postgresql://postgres:postgres@localhost/InsectSys", NoTls)?;
     
     cli.batch_execute("
-        CREATE TABLE IF NOT EXISTS User (
+        CREATE TABLE IF NOT EXISTS Account (
             id              SERIAL PRIMARY KEY,
             nick_name       VARCHAR NOT NULL,
             email           VARCHAR NOT NULL,
