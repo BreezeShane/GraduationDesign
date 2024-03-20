@@ -10,8 +10,9 @@ fn main() -> Result<(), Error> {
             email           VARCHAR NOT NULL,
             contribution    SMALLINT NOT NULL,
             available       BOOLEAN NOT NULL
-        )
+        );
     ")?;
+    print!("Created Account Table!");
 
     // Create Trainable Feedback Table.
     cli.batch_execute("
@@ -21,9 +22,10 @@ fn main() -> Result<(), Error> {
             from_user_id    SERIAL NOT NULL,
             time_out        TIMESTAMP NOT NULL,
             pic_link        TEXT NOT NULL,
-            real_label      VARCHAR NOT NULL,
-        )
+            real_label      VARCHAR NOT NULL
+        );
     ")?;
+    print!("Created TFeedback Table!");
 
     // Create Untrainable Feedback Table.
     cli.batch_execute("
@@ -32,8 +34,10 @@ fn main() -> Result<(), Error> {
             time_stamp      TIMESTAMP NOT NULL,
             from_user_id    SERIAL NOT NULL,
             pic_link        TEXT NOT NULL,
-            real_label      VARCHAR,
-        )
+            real_label      VARCHAR
+        );
     ")?;
+    print!("Created UFeedback Table!");
+
     Ok(())
 }

@@ -26,7 +26,6 @@
 │   │   └── pages
 │   ├── tailwind.config.ts
 │   └── tsconfig.json
-├── output
 ├── README.md
 └── src
     ├── authenticator.rs
@@ -50,7 +49,7 @@
 
 ### PostgreSQL
 
-#### Install & Initialize [Reference](https://blog.csdn.net/Mculover666/article/details/124049857)
+#### Install & Initialize [[Reference]](https://blog.csdn.net/Mculover666/article/details/124049857)
 ```shell
 yay -S postgresql --noconfirm
 sudo passwd postgres
