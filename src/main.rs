@@ -39,7 +39,7 @@ async fn main() {
     // build our application with a single route
     let app = Router::new() 
         .route("/", get(|| async { "Hello, World!" }))
-        .route("/sign_in", get(|| async { "Hello, World!" }))
+        .route("/sign_in", get(authenticator::handler_sign_in))
         .route("/sign_up", get(|| async { "Hello, World!" }))
         .route("/sign_out", get(|| async { "Hello, World!" }))
         .route("/:user_id/result", get(|| async { "Hello, World!" }))

@@ -12,7 +12,7 @@ fn main() -> Result<(), Error> {
             available       BOOLEAN NOT NULL
         );
     ")?;
-    print!("Created Account Table!");
+    print!("Created Account Table!\n");
 
     // Create Trainable Feedback Table.
     cli.batch_execute("
@@ -25,7 +25,7 @@ fn main() -> Result<(), Error> {
             real_label      VARCHAR NOT NULL
         );
     ")?;
-    print!("Created TFeedback Table!");
+    print!("Created TFeedback Table!\n");
 
     // Create Untrainable Feedback Table.
     cli.batch_execute("
@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
             real_label      VARCHAR
         );
     ")?;
-    print!("Created UFeedback Table!");
+    print!("Created UFeedback Table!\n");
 
     Ok(())
 }
