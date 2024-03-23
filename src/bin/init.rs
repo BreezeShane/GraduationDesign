@@ -7,7 +7,8 @@ fn main() -> Result<(), Error> {
         CREATE TABLE IF NOT EXISTS Account (
             id              SERIAL PRIMARY KEY,
             nick_name       VARCHAR NOT NULL,
-            password        VARCHAR NOT NULL,
+            password_salt   VARCHAR NOT NULL,
+            password_hash   VARCHAR NOT NULL,
             email           VARCHAR NOT NULL,
             contribution    SMALLINT NOT NULL,
             available       BOOLEAN NOT NULL,

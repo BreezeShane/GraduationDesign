@@ -1,13 +1,3 @@
-use axum::{
-    routing::get,
-    Router,
-};
-use bb8::Pool; // PooledConnection
-use bb8_postgres::PostgresConnectionManager;
-use tokio_postgres::NoTls;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
-// pub mod postgresql;
 pub mod authenticator;
 pub mod cache;
 pub mod dataset_io;
@@ -17,40 +7,44 @@ pub mod pic_io;
 pub mod training_show;
 pub mod user_manager;
 
+use authenticator::{handler_sign_in, handler_sign_out, handler_sign_up, middleware_authorize};
+use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
+use tokio_postgres::{Config, NoTls};
+use axum::{
+    middleware, routing::{get, post}, Router
+};
+
+
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "insects-identifier=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
-
-    // set up connection pool
-    let manager: PostgresConnectionManager<NoTls> =
-        PostgresConnectionManager::new_from_stringlike("
-        host=localhost user=postgres password=postgres dbname=InsectSys
-        ", NoTls).unwrap();
-    
-    let pool: Pool<PostgresConnectionManager<NoTls>> = 
-        Pool::builder().build(manager).await.unwrap();
+    let mut config = Config::new();
+    config.host("localhost");
+    config.user("postgres");//数据库用户名
+    config.password("postgres");//数据库密码
+    config.dbname("InsectSys");//数据库名称
+    let mgr_config = ManagerConfig {
+        recycling_method: RecyclingMethod::Fast
+    };
+    let mgr = Manager::from_config(config, NoTls, mgr_config);
+    let pool = Pool::builder(mgr).max_size(16).build().unwrap();
 
     // build our application with a single route
+    
     let app = Router::new() 
+    // .route("/:user_id/result", get())
+    // .route("/:user_id/feedback", get())
+    // .route("/:user_id/admin/", get())
+    // .route("/:user_id/admin/feedback_manage", get())
+    // .route("/:user_id/admin/user_manage", get())
+    // .route("/:user_id/admin/training_effect", get())
+    // .route("/:user_id/admin/training_panel", get())
+    // .route("/:user_id/admin/dataset_manage", get())
+    // .route("/:user_id/admin/model_backup", get())
+        .route("/sign_out/:user_id", get(handler_sign_out))
+        .layer(middleware::from_fn(middleware_authorize))
         .route("/", get(|| async { "Hello, World!" }))
-        .route("/sign_in", get(authenticator::handler_sign_in))
-        .route("/sign_up", get(|| async { "Hello, World!" }))
-        .route("/sign_out", get(|| async { "Hello, World!" }))
-        .route("/:user_id/result", get(|| async { "Hello, World!" }))
-        .route("/:user_id/feedback", get(|| async { "Hello, World!" }))
-        .route("/:user_id/admin/", get(|| async { "Hello, World!" }))
-        .route("/:user_id/admin/feedback_manage", get(|| async { "Hello, World!" }))
-        .route("/:user_id/admin/user_manage", get(|| async { "Hello, World!" }))
-        .route("/:user_id/admin/training_effect", get(|| async { "Hello, World!" }))
-        .route("/:user_id/admin/training_panel", get(|| async { "Hello, World!" }))
-        .route("/:user_id/admin/dataset_manage", get(|| async { "Hello, World!" }))
-        .route("/:user_id/admin/model_backup", get(|| async { "Hello, World!" }))
+        .route("/sign_in", post(handler_sign_in))
+        .route("/sign_up", post(handler_sign_up))
         .with_state(pool);
 
     // run our app with hyper, listening globally on port 3000
