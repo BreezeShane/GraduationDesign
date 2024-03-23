@@ -7,9 +7,11 @@ fn main() -> Result<(), Error> {
         CREATE TABLE IF NOT EXISTS Account (
             id              SERIAL PRIMARY KEY,
             nick_name       VARCHAR NOT NULL,
+            password        VARCHAR NOT NULL,
             email           VARCHAR NOT NULL,
             contribution    SMALLINT NOT NULL,
-            available       BOOLEAN NOT NULL
+            available       BOOLEAN NOT NULL,
+            permissions     SMALLINT NOT NULL
         );
     ")?;
     print!("Created Account Table!\n");
