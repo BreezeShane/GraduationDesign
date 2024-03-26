@@ -13,6 +13,7 @@ use tokio_postgres::{Config, NoTls};
 use axum::{
     middleware, routing::{get, post}, Router
 };
+use user_manager::handler_ban_or_unban_user;
 
 
 #[tokio::main]
@@ -35,13 +36,14 @@ async fn main() {
     // .route("/:user_id/feedback", get())
     // .route("/:user_id/admin/", get())
     // .route("/:user_id/admin/feedback_manage", get())
-    // .route("/:user_id/admin/user_manage", get())
+        // .route("/:user_id/admin/user_manage", get())
+        .route("/:user_id/admin/user_manage", post(handler_ban_or_unban_user))
     // .route("/:user_id/admin/training_effect", get())
     // .route("/:user_id/admin/training_panel", get())
     // .route("/:user_id/admin/dataset_manage", get())
     // .route("/:user_id/admin/model_backup", get())
         .route("/sign_out/:user_id", get(handler_sign_out))
-        .layer(middleware::from_fn(middleware_authorize))
+        .route_layer(middleware::from_fn(middleware_authorize))
         .route("/", get(|| async { "Hello, World!" }))
         .route("/sign_in", post(handler_sign_in))
         .route("/sign_up", post(handler_sign_up))

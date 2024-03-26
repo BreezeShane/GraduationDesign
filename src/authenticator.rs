@@ -15,16 +15,29 @@ use ring::{digest, pbkdf2, rand};
 use std::num::NonZeroU32;
 
 use axum::{
+    Form,
     Json,
     middleware::Next, 
     extract::Request, 
     response::Response, 
-    extract::{Path, State}, 
+    extract::State, 
     http::{HeaderMap, StatusCode}, 
 };
 
 const JWT_EXPIRATION: i64 = 3900;
 const CREDENTIAL_LEN: usize = digest::SHA512_OUTPUT_LEN;
+
+#[derive(Debug)]
+/// Manage_Feedback Manage_User Manage_Model Train&Upload_Model&View_Training_Effect Common
+/// 0/1             0/1         0/1          0/1                                     0/1
+/// Permission: Enum
+/// Permission::<Role>: isize
+/// Each bit means status of the matched permission.
+pub enum Permissions {
+    UserAdmin = 0b11001isize,
+    ModelAdmin = 0b00111isize,
+    CommonUser = 0b00001isize
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -34,17 +47,17 @@ pub struct Claims {
     expire_on: usize,
 }
 
-#[derive(Serialize, Deserialize, PostgresMapper)]
+#[derive(Serialize, Deserialize, PostgresMapper, Clone)]
 #[pg_mapper(table = "Account")]
 pub struct Account {
     id: u32,
     nick_name: String,
     password_salt: String,
     password_hash: String,
-    email: String,
-    permissions: i8,
+    pub email: String,
+    pub permissions: i8,
     contribution: i16,
-    available: bool,
+    pub available: bool,
 }
 
 #[derive(Serialize, Deserialize, PostgresMapper)]
@@ -100,7 +113,7 @@ pub fn verify_jwt(token: String) -> Result<Claims, Error> {
 
 pub async fn handler_sign_in(
     State(pool): State<Pool>,
-    Path(sign_in_form): Path<RequestAccount>
+    Form(sign_in_form): Form<RequestAccount>
 ) -> Result<axum::Json<String>, (StatusCode, String)> {
     let client = pool.get().await.unwrap();
     let user_request: RequestAccount = sign_in_form;
@@ -153,7 +166,7 @@ pub async fn handler_sign_in(
 
 pub async fn handler_sign_up(
     State(pool): State<Pool>,
-    Path(sign_up_form): Path<RequestAccount>
+    Form(sign_up_form): Form<RequestAccount>
 ) -> Result<axum::Json<String>, (StatusCode, String)> {
     let client = pool.get().await.unwrap();
 
@@ -178,7 +191,7 @@ pub async fn handler_sign_up(
         None => {
             let contribute: i16 = 0;
             let available = true;
-            let permissions = 0b00001i8;
+            let permissions = Permissions::CommonUser as i8;
             let (passwd_salt, passwd_hash) = 
                 encrypt(user_request.password);
             
@@ -209,8 +222,8 @@ pub async fn handler_sign_up(
     }
 }
 
-pub async fn handler_sign_out() {
-
+pub async fn handler_sign_out() -> Result<axum::Json<String>, (StatusCode, String)> {
+    Err((StatusCode::NOT_IMPLEMENTED, "Not implemented API!".to_string()))
 }
 
 pub async fn middleware_authorize(
