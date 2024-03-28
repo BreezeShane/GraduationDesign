@@ -1,3 +1,5 @@
+use std::{fs::create_dir, path::Path};
+
 use postgres::{Client, NoTls, Error};
 
 fn main() -> Result<(), Error> {
@@ -41,6 +43,15 @@ fn main() -> Result<(), Error> {
         );
     ")?;
     print!("Created UFeedback Table!\n");
+
+    const USER_PIC_PATH: &str = "./data_src/";
+    let path = Path::new(USER_PIC_PATH);
+    if !path.exists() {
+        match create_dir(&path) {
+            Ok(_) => println!("Root Src Directory initialized."),
+            Err(e) => println!("Error creating root directory: {}", e)
+        }
+    }
 
     Ok(())
 }

@@ -8,10 +8,11 @@ pub mod training_show;
 pub mod user_manager;
 
 use authenticator::{handler_sign_in, handler_sign_out, handler_sign_up, middleware_authorize};
+use cache::handler_recieve_uploaded_pic;
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use tokio_postgres::{Config, NoTls};
 use axum::{
-    middleware, routing::{get, post}, Router
+    extract::DefaultBodyLimit, middleware, routing::{get, post}, Router
 };
 use user_manager::handler_ban_or_unban_user;
 
@@ -33,6 +34,7 @@ async fn main() {
     
     let app = Router::new() 
     // .route("/:user_id/result", get())
+        .route("/:user_id/upload_pic", post(handler_recieve_uploaded_pic))
     // .route("/:user_id/feedback", get())
     // .route("/:user_id/admin/", get())
     // .route("/:user_id/admin/feedback_manage", get())
@@ -47,7 +49,8 @@ async fn main() {
         .route("/", get(|| async { "Hello, World!" }))
         .route("/sign_in", post(handler_sign_in))
         .route("/sign_up", post(handler_sign_up))
-        .with_state(pool);
+        .with_state(pool)
+        .layer(DefaultBodyLimit::max(1024));
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080").await.unwrap();
