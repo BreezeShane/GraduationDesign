@@ -1,15 +1,14 @@
 pub mod authenticator;
 pub mod cache;
-pub mod dataset_io;
 pub mod feedback;
 pub mod model_backup;
-pub mod pic_io;
 pub mod training_show;
 pub mod user_manager;
 
 use authenticator::{handler_sign_in, handler_sign_out, handler_sign_up, middleware_authorize};
 use cache::handler_recieve_uploaded_pic;
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
+use feedback::handler_feedback;
 use tokio_postgres::{Config, NoTls};
 use axum::{
     extract::DefaultBodyLimit, middleware, routing::{get, post}, Router
@@ -35,7 +34,7 @@ async fn main() {
     let app = Router::new() 
     // .route("/:user_id/result", get())
         .route("/:user_id/upload_pic", post(handler_recieve_uploaded_pic))
-    // .route("/:user_id/feedback", get())
+        .route("/:user_id/feedback", post(handler_feedback))
     // .route("/:user_id/admin/", get())
     // .route("/:user_id/admin/feedback_manage", get())
         // .route("/:user_id/admin/user_manage", get())
