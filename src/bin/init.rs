@@ -7,11 +7,11 @@ fn main() -> Result<(), Error> {
     
     cli.batch_execute("
         CREATE TABLE IF NOT EXISTS Account (
-            id              SERIAL PRIMARY KEY,
+            id              SERIAL,
             nick_name       VARCHAR NOT NULL,
             password_salt   VARCHAR NOT NULL,
             password_hash   VARCHAR NOT NULL,
-            email           VARCHAR NOT NULL,
+            email           VARCHAR PRIMARY KEY NOT NULL,
             contribution    SMALLINT NOT NULL,
             available       BOOLEAN NOT NULL,
             permissions     SMALLINT NOT NULL
@@ -24,10 +24,11 @@ fn main() -> Result<(), Error> {
         CREATE TABLE IF NOT EXISTS TFeedback (
             id              SERIAL PRIMARY KEY,
             time_stamp      TIMESTAMP NOT NULL,
-            from_user_id    SERIAL NOT NULL,
+            from_user_email    VARCHAR NOT NULL,
             time_out        TIMESTAMP NOT NULL,
             pic_link        TEXT NOT NULL,
-            real_label      VARCHAR NOT NULL
+            real_label      VARCHAR NOT NULL,
+            acceptable      BOOLEAN NOT NULL
         );
     ")?;
     print!("Created TFeedback Table!\n");
@@ -37,9 +38,9 @@ fn main() -> Result<(), Error> {
         CREATE TABLE IF NOT EXISTS UFeedback (
             id              SERIAL PRIMARY KEY,
             time_stamp      TIMESTAMP NOT NULL,
-            from_user_id    SERIAL NOT NULL,
+            from_user_email    VARCHAR NOT NULL,
             pic_link        TEXT NOT NULL,
-            real_label      VARCHAR
+            acceptable      BOOLEAN NOT NULL
         );
     ")?;
     print!("Created UFeedback Table!\n");
