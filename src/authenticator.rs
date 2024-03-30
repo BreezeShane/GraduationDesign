@@ -1,4 +1,5 @@
 use std::env;
+use std::ops::BitAnd;
 use sha2::Sha384;
 use chrono::{TimeZone, Utc};
 use deadpool_postgres::Pool;
@@ -27,23 +28,77 @@ use axum::{
 const JWT_EXPIRATION: i64 = 3900;
 const CREDENTIAL_LEN: usize = digest::SHA512_OUTPUT_LEN;
 
-#[derive(Debug)]
-/// Manage_Feedback Manage_User Manage_Model Train&Upload_Model&View_Training_Effect Common
-/// 0/1             0/1         0/1          0/1                                     0/1
-/// Permission: Enum
-/// Permission::<Role>: isize
-/// Each bit means status of the matched permission.
-pub enum Permissions {
-    UserAdmin = 0b11001isize,
-    ModelAdmin = 0b00111isize,
-    CommonUser = 0b00001isize
+#[macro_export]
+macro_rules! back_to_enum {
+    ($(#[$meta:meta])* $vis:vis enum $name:ident {
+        $($(#[$vmeta:meta])* $vname:ident $(= $val:expr)?,)*
+    }) => {
+        $(#[$meta])*
+        $vis enum $name {
+            $($(#[$vmeta])* $vname $(= $val)?,)*
+        }
+
+        impl std::convert::TryFrom<i8> for $name {
+            type Error = ();
+
+            fn try_from(v: i8) -> Result<Self, Self::Error> {
+                match v {
+                    $(x if x == $name::$vname as i8 => Ok($name::$vname),)*
+                    _ => Err(()),
+                }
+            }
+        }
+    }
 }
+
+back_to_enum! {
+    #[derive(Debug)]
+    /// Manage_Feedback Manage_User Manage_Model Train&Upload_Model&View_Training_Effect Common
+    /// 0/1             0/1         0/1          0/1                                     0/1
+    /// Permission: Enum
+    /// Permission::<Role>: isize
+    /// Each bit means status of the matched permission.
+    pub enum Role {
+        UserAdmin   =   0b11001isize,
+        ModelAdmin  =   0b00111isize,
+        CommonUser  =   0b00001isize,
+    }
+}
+
+pub enum Permission {
+    MngFeedBack =   0b10000isize,
+    MngUsr      =   0b01000isize,
+    MngModel    =   0b00100isize,
+    TUV         =   0b00010isize,
+    Common      =   0b00001isize
+}
+
+impl BitAnd<Permission> for Role {
+    type Output = bool;
+    fn bitand(self, rhs: Permission) -> Self::Output {
+        let role = self as isize;
+        let permission = rhs as isize;
+        role & permission == permission
+    }
+}
+
+// impl TryFrom<i8> for Role {
+//     type Error = ();
+
+//     fn try_from(value: i8) -> Result<Self, Self::Error> {
+//         match value {
+//             x if x == Role::CommonUser as i8 => Ok(Role::CommonUser),
+//             x if x == Role::UserAdmin as i8 => Ok(Role::UserAdmin),
+//             x if x == Role::ModelAdmin as i8 => Ok(Role::ModelAdmin),
+//             _ => Err(())
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
     sub: String,
     user_name: String,
-    // permissions: i8,
     expire_on: usize,
 }
 
@@ -70,6 +125,11 @@ pub struct RequestAccount {
     permissions: i8,
     contribution: i16,
     available: bool,
+}
+
+pub fn check_permission(user: &Account, permission: Permission) -> bool {
+    let role: Role = user.permissions.try_into().unwrap();
+    role & permission
 }
 
 // Possible to create struct Config to maintain envs.
@@ -191,7 +251,7 @@ pub async fn handler_sign_up(
         None => {
             let contribute: i16 = 0;
             let available = true;
-            let permissions = Permissions::CommonUser as i8;
+            let permissions = Role::CommonUser as i8;
             let (passwd_salt, passwd_hash) = 
                 encrypt(user_request.password);
             

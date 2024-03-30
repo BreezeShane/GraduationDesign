@@ -3,7 +3,7 @@ use deadpool_postgres::Pool;
 use serde::{Deserialize, Serialize};
 use tokio_pg_mapper::FromTokioPostgresRow;
 
-use crate::authenticator::{Account, Permissions};
+use crate::authenticator::{check_permission, Account, Permission};
 
 #[derive(Serialize, Deserialize)]
 enum Action {
@@ -34,17 +34,17 @@ pub async fn handler_ban_or_unban_user(
                 SELECT nick_name, email, permissions, available FROM account WHERE email=$1 ORDER BY id DESC LIMIT 1;
             ").await.map_err(|err| (StatusCode::BAD_REQUEST, format!("Bad query! {}", err)))?;
 
-        let check_permissions = client
+        let current_user = client
             .query(&query_statement, &[&action_request.admin_email])
             .await
-            .map_err(|err| (StatusCode::NOT_FOUND, err.to_string()))?
+            .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
             .iter()
             .map(|row| Account::from_row_ref(row).unwrap())
             .collect::<Vec<Account>>()
             .pop()
             .ok_or((StatusCode::NOT_FOUND, format!("Couldn't find account: {:?}", action_request.operated_user_email)))?;
 
-        if check_permissions.permissions != Permissions::UserAdmin as i8 {
+        if !check_permission(&current_user, Permission::MngUsr) {
             return  Err(
                 (StatusCode::FORBIDDEN, "Not permitted!".to_string())
             );
