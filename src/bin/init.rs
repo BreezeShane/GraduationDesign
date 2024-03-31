@@ -1,4 +1,4 @@
-use std::{fs::create_dir, path::Path};
+use std::{fs::{create_dir, File}, io::Write, path::Path};
 
 use postgres::{Client, NoTls, Error};
 
@@ -45,14 +45,32 @@ fn main() -> Result<(), Error> {
     ")?;
     print!("Created UFeedback Table!\n");
 
+    // init data source folder.
     const USER_PIC_PATH: &str = "./data_src/";
-    let path = Path::new(USER_PIC_PATH);
-    if !path.exists() {
-        match create_dir(&path) {
+    let src_path = Path::new(USER_PIC_PATH);
+    if !src_path.exists() {
+        match create_dir(&src_path) {
             Ok(_) => println!("Root Src Directory initialized."),
             Err(e) => println!("Error creating root directory: {}", e)
         }
     }
 
+    // init document database storage file
+    const DOC_STORED_PATH: &str = "./doc.db";
+    let doc_path = Path::new(DOC_STORED_PATH);
+    let doc_path_display = doc_path.display();
+    if !doc_path.exists() {
+        let mut file = match File::create(&doc_path) {
+            Err(err) => panic!("couldn't create {}: {:?}", doc_path_display, err),
+            Ok(file) => file,
+        };
+
+        match file.write_all("".as_bytes()) {
+            Err(err) => {
+                panic!("couldn't write to {}: {:?}", doc_path_display, err)
+            },
+            Ok(_) => println!("successfully wrote to {}", doc_path_display),
+        }
+    }
     Ok(())
 }

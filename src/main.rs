@@ -4,6 +4,7 @@ pub mod feedback;
 pub mod model_backup;
 pub mod training_show;
 pub mod user_manager;
+pub mod doc_database;
 
 use authenticator::{handler_sign_in, handler_sign_out, handler_sign_up, middleware_authorize};
 use cache::handler_recieve_uploaded_pic;
