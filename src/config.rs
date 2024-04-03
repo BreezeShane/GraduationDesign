@@ -13,3 +13,6 @@ pub const JWT_EXPIRATION: i64 = 3900;
 
 // feedback.rs
 pub const FEEDBACK_EXPIRATION: i64 = 86400;
+
+// daemon.rs
+pub const TIMER_DURATION: u64 = 3600;

@@ -1,25 +1,23 @@
+use axum::Json;
 use chrono::Utc;
 use axum::{extract::State, http::StatusCode, Form};
 use postgres::types::ToSql;
 use serde::{Deserialize, Serialize};
-use tokio_pg_mapper_derive::PostgresMapper;
 
 use crate::authenticator::{check_permission, Permission};
-use crate::cache::obtain_dir;
+use crate::io_cache::obtain_dir;
 use crate::config::FEEDBACK_EXPIRATION;
 use crate::MultiState;
 
 
-#[derive(Serialize, Deserialize, PostgresMapper)]
-#[pg_mapper(table = "RequestFeedback")]
+#[derive(Serialize, Deserialize)]
 pub struct  RequestFeedback {
     user_id: String,
     pic_name: String,
     real_label: Option<String>
 }
 
-#[derive(Serialize, Deserialize, PostgresMapper)]
-#[pg_mapper(table = "Feedback")]
+#[derive(Serialize, Deserialize)]
 pub struct Feedback {
     timestamp: i64,
     from_user_email: String,
@@ -29,7 +27,7 @@ pub struct Feedback {
     acceptable: bool
 }
 
-pub async fn handler_feedback(
+pub async fn handler_subm_fb(
     State(multi_state): State<MultiState>,
     Form(user_feedback): Form<RequestFeedback>
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
@@ -163,4 +161,17 @@ pub async fn handler_feedback(
     }
     
     Ok((StatusCode::OK, "Succeed to submit the feedback!".to_string()))
+}
+
+pub async fn handler_fetch_fb(
+    State(multi_state): State<MultiState>,
+) -> Result<Json<Feedback>, (StatusCode, String)> {
+    todo!()
+}
+
+pub async fn handler_acc_rej_fb(
+    State(multi_state): State<MultiState>,
+    Form(user_feedback): Form<RequestFeedback>
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    todo!()
 }
