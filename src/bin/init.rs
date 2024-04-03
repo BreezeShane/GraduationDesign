@@ -47,17 +47,31 @@ fn main() -> Result<(), Error> {
 
     // init data source folder.
     const USER_PIC_PATH: &str = "./data_src/";
-    let src_path = Path::new(USER_PIC_PATH);
+    const DATASETS_DIRECTORY: &str = "./datasets/";
+    init_dir(USER_PIC_PATH);
+    init_dir(DATASETS_DIRECTORY);
+
+    // init document database storage file
+    const QUEUE_STORED_PATH: &str = "./queue.db";
+    touch_file(QUEUE_STORED_PATH);
+    const DATASETS_STORED_PATH: &str = "./datasets.db";
+    touch_file(DATASETS_STORED_PATH);
+
+    Ok(())
+}
+
+fn init_dir(path: &str) {
+    let src_path = Path::new(path);
     if !src_path.exists() {
         match create_dir(&src_path) {
             Ok(_) => println!("Root Src Directory initialized."),
             Err(e) => println!("Error creating root directory: {}", e)
         }
     }
+}
 
-    // init document database storage file
-    const DOC_STORED_PATH: &str = "./doc.db";
-    let doc_path = Path::new(DOC_STORED_PATH);
+fn touch_file(path: &str) {
+    let doc_path = Path::new(path);
     let doc_path_display = doc_path.display();
     if !doc_path.exists() {
         let mut file = match File::create(&doc_path) {
@@ -72,5 +86,4 @@ fn main() -> Result<(), Error> {
             Ok(_) => println!("successfully wrote to {}", doc_path_display),
         }
     }
-    Ok(())
 }

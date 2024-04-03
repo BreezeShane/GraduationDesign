@@ -1,14 +1,15 @@
 use chrono::Utc;
-use axum::{extract::{Path, State}, http::StatusCode, Form};
+use axum::{extract::State, http::StatusCode, Form};
 use deadpool_postgres::Pool;
 use postgres::types::ToSql;
 use serde::{Deserialize, Serialize};
-use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
 
-use crate::authenticator::{check_permission, Account, Permission};
+use crate::authenticator::{check_permission, Permission};
+use crate::cache::obtain_dir;
+use crate::config::FEEDBACK_EXPIRATION;
+use crate::MultiState;
 
-const FEEDBACK_EXPIRATION: i64 = 86400;
 
 #[derive(Serialize, Deserialize, PostgresMapper)]
 #[pg_mapper(table = "RequestFeedback")]
@@ -30,28 +31,11 @@ pub struct Feedback {
 }
 
 pub async fn handler_feedback(
-    State(pool): State<Pool>,
-    Path(request): Path<RequestFeedback>,
-    Form(user_feedback): Form<Feedback>
+    State(multi_state): State<MultiState>,
+    Form(user_feedback): Form<RequestFeedback>
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    let client = pool.get().await.unwrap();
-
-    let auth_statement = client
-    .prepare("
-        SELECT nick_name, email, permissions, available FROM account WHERE email=$1 ORDER BY id DESC LIMIT 1;
-    ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
-    let current_user = client
-    .query(&auth_statement, &[&request.user_id])
-    .await
-    .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
-    .iter()
-    .map(|row| Account::from_row_ref(row).unwrap())
-    .collect::<Vec<Account>>()
-    .pop()
-    .ok_or((StatusCode::NOT_FOUND, format!("Couldn't find account: {:?}", request.user_id)))?;
-
-    if !check_permission(&current_user, Permission::Common) {
-        return  Err(
+    if !check_permission(&multi_state.db_pool, &user_feedback.user_id, Permission::Common).await.unwrap() {
+        return Err(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
@@ -64,8 +48,8 @@ pub async fn handler_feedback(
             None => {
                 feedback = Feedback {
                     timestamp: Utc::now().timestamp(),
-                    from_user_email: current_user.email.clone(),
-                    pic_path: user_feedback.pic_path.clone(),
+                    from_user_email: user_feedback.user_id.clone(),
+                    pic_path: obtain_dir(&user_feedback.user_id).unwrap(),
                     acceptable: false,
                     real_label: None,
                     deadline: None,
@@ -79,9 +63,9 @@ pub async fn handler_feedback(
             Some(_) => {
                 feedback = Feedback {
                     timestamp: Utc::now().timestamp(),
-                    from_user_email: current_user.email.clone(),
+                    from_user_email: user_feedback.user_id.clone(),
                     deadline: Some(Utc::now().timestamp() + FEEDBACK_EXPIRATION),
-                    pic_path: user_feedback.pic_path.clone(),
+                    pic_path: obtain_dir(&user_feedback.user_id).unwrap(),
                     real_label: user_feedback.real_label,
                     acceptable: false
                 };
@@ -121,7 +105,7 @@ pub async fn handler_feedback(
     //             None => {
     //                 feedback = Feedback {
     //                     timestamp: Utc::now().timestamp(),
-    //                     from_user_email: current_user.email.clone(),
+    //                     from_user_email: user_feedback.from_user_email.clone(),
     //                     pic_path: user_feedback.pic_path.clone(),
     //                     acceptable: false,
     //                     real_label: None,
@@ -166,6 +150,7 @@ pub async fn handler_feedback(
     //         (insert_statement, params)
     // })();
 
+    let client = multi_state.db_pool.get().await.unwrap();
     let feedback_statement = client
             .prepare(&insert_statement).await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?; 
 

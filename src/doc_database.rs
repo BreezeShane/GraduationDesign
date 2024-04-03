@@ -1,32 +1,32 @@
 use data_encoding::HEXUPPER;
 use serde::{Serialize, Deserialize};
-use std::{fs::File, io::{BufRead, BufReader, Write}};
+use tokio_pg_mapper_derive::PostgresMapper;
+use std::{fs::{self, File}, io::{BufRead, BufReader, Write}, path::{Path, PathBuf}};
+use crate::config::{
+    QUEUE_MAX_LENGTH, 
+    QUEUE_STORED_PATH, 
+    DATASETS_STORED_PATH, 
+};
 
-const QUEUE_STORED_PATH: &str = "./queue.db";
-const DATASETS_STORED_PATH: &str = "./datasets.db";
-const QUEUE_MAX_LENGTH: usize = 10;
 
-#[derive(Serialize, Deserialize)]
-struct Dataset {
-    name: String,
-    timestamp: i64,
-    available: bool
+#[derive(Serialize, Deserialize, Clone, PostgresMapper)]
+#[pg_mapper(table = "Dataset")]
+pub struct Dataset {
+    pub name: String,
+    pub timestamp: i64,
+    pub available: bool
 }
-type DatasetVec = Vec<Dataset>;
+pub type DatasetVec = Vec<Dataset>;
 
-// const DATASET_NONE_VALUE: Option<Dataset> = None;
 
-trait DatasetTrait {
+pub trait DatasetTrait {
     fn init_vec() -> DatasetVec;
-    fn load<
-        T: for<'a> Into< Option<&'a str> >
-        >(file_path: T) -> Result<DatasetVec, String>;
+    fn load(file_path: impl AsRef<Path>) -> Result<DatasetVec, String>;
     fn save(&self) -> Result<usize, std::io::Error>;
-    fn append(&mut self, dataset: Dataset) -> Result<(), String>;
-
-    fn search(vec: &mut DatasetVec, dataset_name: &str) -> Option<usize>;
-    fn en_disable(vec: &mut DatasetVec, dataset_name: &str) -> Result<bool, String>;
-    fn remove(vec: &mut DatasetVec, dataset_name: &str) -> Result<Dataset, String>;
+    fn append_dset(&mut self, dataset: Dataset) -> Result<(), String>;
+    fn rm_dset(&mut self, dataset_name: &str) -> Result<(), String>;
+    fn xch_stat(&mut self, dataset_name: &str) -> Result<bool, String>;
+    fn srch(&self, dataset_name: &str) -> Option<usize>;
 }
 
 impl DatasetTrait for DatasetVec {
@@ -41,20 +41,17 @@ impl DatasetTrait for DatasetVec {
         file.write(json_encoded.as_bytes())
     }
 
-    fn append(&mut self, dataset: Dataset) -> Result<(), String> {
+    fn append_dset(&mut self, dataset: Dataset) -> Result<(), String> {
         self.push(dataset);
         Ok(())
     }
 
-    fn load<
-        T: for<'a> Into< Option<&'a str> >
-    >(file_path: T) -> Result<DatasetVec, String>{
-        let file = 
-            File::open(
-                file_path.into()
-                .unwrap_or(DATASETS_STORED_PATH)
-            )
-            .map_err(|err| err.to_string())?;
+    fn load(file_path: impl AsRef<Path>) -> Result<DatasetVec, String> {
+        let default_file = File::open(DATASETS_STORED_PATH).unwrap();
+        let file = match File::open(file_path) {
+            Ok(file) => file,
+            Err(_) => default_file
+        };
 
         let buffered = BufReader::new(file);
 
@@ -75,18 +72,18 @@ impl DatasetTrait for DatasetVec {
         Ok(dataset_vec)
     }
 
-    fn search(vec: &mut DatasetVec, dataset_name: &str) -> Option<usize> {
-        vec.iter().position(
+    fn srch(&self, dataset_name: &str) -> Option<usize> {
+        self.iter().position(
             |dataset| dataset.name == dataset_name
         )
     }
 
-    fn en_disable(vec: &mut DatasetVec, dataset_name: &str) -> Result<bool, String> {
-        let index_opt = Self::search(vec, dataset_name);
+    fn xch_stat(&mut self, dataset_name: &str) -> Result<bool, String> {
+        let index_opt = self.srch(dataset_name);
         match index_opt {
             None => return Err(format!("Dataset: {} does not exist!", dataset_name)),
             Some(index) => {
-                let dataset = vec.get_mut(index).unwrap();
+                let dataset: &mut Dataset = self.get_mut(index).unwrap();
                 let new_status = !dataset.available;
                 dataset.available = new_status;
                 Ok(new_status)
@@ -94,46 +91,54 @@ impl DatasetTrait for DatasetVec {
         }
     }
     
-    fn remove(vec: &mut DatasetVec, dataset_name: &str) -> Result<Dataset, String> {
-        let index_opt = Self::search(vec, dataset_name);
+    fn rm_dset(&mut self, dataset_name: &str) -> Result<(), String> {
+        let index_opt = self.srch(dataset_name);
         match index_opt {
             None => return Err(format!("Dataset: {} does not exist!", dataset_name)),
-            Some(index) => return Ok(vec.remove(index))
+            Some(index) => {
+                let _ = self.remove(index);
+                let path_buf = PathBuf::from(DATASETS_STORED_PATH).join(dataset_name);
+                let result = fs::remove_file(path_buf);
+                match result {
+                    Ok(_) => return Ok(()),
+                    Err(err) => return Err(err.to_string())
+                }
+            }
         }
+        
+        
+        
     }
 }
-
-
 
 /// Datasets ⮥
 /// 
 /// Training Queue ↴
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct TrainingUnit {
-    // id: i8,
+pub struct TrainingTask {
     pic_path: String,
     label: String
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Queue {
     head: usize,
     tail: usize,
     count: i8,
-    queue: [Option<TrainingUnit>; QUEUE_MAX_LENGTH]
+    queue: [Option<TrainingTask>; QUEUE_MAX_LENGTH]
 }
 
-const QUEUE_NONE_VALUE: Option<TrainingUnit> = None;
+const QUEUE_NONE_VALUE: Option<TrainingTask> = None;
 
-trait QueueTrait {
+pub trait QueueTrait {
     fn init_queue() -> Queue;
     fn is_empty(&self) -> bool;
     fn is_full(&self) -> bool;
-    fn append(&mut self, train_unit: TrainingUnit) -> Result<(), String>;
-    fn pop(&mut self) -> Result<TrainingUnit, String>;
+    fn append_task(&mut self, train_unit: TrainingTask) -> Result<(), String>;
+    fn pop(&mut self) -> Result<TrainingTask, String>;
     fn save(&self) -> Result<usize, std::io::Error>;
-    fn load<T: for<'a> Into<Option<&'a str>>>(file_path: T) -> Result<Queue, String>;
+    fn load(file_path: impl AsRef<Path>) -> Result<Queue, String>;
 }
 
 impl QueueTrait for Queue {
@@ -154,7 +159,7 @@ impl QueueTrait for Queue {
         self.count == (QUEUE_MAX_LENGTH as i8)
     }
 
-    fn append(&mut self, train_unit: TrainingUnit) -> Result<(), String> {
+    fn append_task(&mut self, train_unit: TrainingTask) -> Result<(), String> {
         if self.is_full() {
             return Err("Queue is full!".to_string())
         }
@@ -164,7 +169,7 @@ impl QueueTrait for Queue {
         Ok(())
     }
 
-    fn pop(&mut self) -> Result<TrainingUnit, String> {
+    fn pop(&mut self) -> Result<TrainingTask, String> {
         if self.is_empty() {
             return Err("Queue is empty! There is no data in queue!".to_string());
         }
@@ -181,15 +186,12 @@ impl QueueTrait for Queue {
         file.write(json_encoded.as_bytes())
     }
 
-    fn load<
-        T: for<'a> Into<Option<&'a str>>
-    >(file_path: T) -> Result<Queue, String> {
-        let file = 
-            File::open(
-                file_path.into()
-                .unwrap_or(QUEUE_STORED_PATH)
-            )
-            .map_err(|err| err.to_string())?;
+    fn load(file_path: impl AsRef<Path>) -> Result<Queue, String> {
+        let default_file = File::open(QUEUE_STORED_PATH).unwrap();
+        let file = match File::open(file_path){
+            Ok(file) => file,
+            Err(_) => default_file,
+        };
 
         let buffered = BufReader::new(file);
     

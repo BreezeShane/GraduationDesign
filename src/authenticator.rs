@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
 use jwt::{AlgorithmType, Error, Header, SignWithKey, Token, VerifyWithKey};
+use crate::config::JWT_EXPIRATION;
+use crate::MultiState;
 
 use data_encoding::HEXUPPER;
 use ring::error::Unspecified;
@@ -25,7 +27,6 @@ use axum::{
     http::{HeaderMap, StatusCode}, 
 };
 
-const JWT_EXPIRATION: i64 = 3900;
 const CREDENTIAL_LEN: usize = digest::SHA512_OUTPUT_LEN;
 
 #[macro_export]
@@ -127,9 +128,30 @@ pub struct RequestAccount {
     available: bool,
 }
 
-pub fn check_permission(user: &Account, permission: Permission) -> bool {
-    let role: Role = user.permissions.try_into().unwrap();
-    role & permission
+pub async fn check_permission (connection: &Pool, user_id: &String, needed_permission: Permission) -> Result<bool, (StatusCode, String)> {
+    let client = connection.get().await.unwrap();
+
+    let auth_statement = client
+    .prepare("
+        SELECT nick_name, email, permissions, available FROM account WHERE email=$1 ORDER BY id DESC LIMIT 1;
+    ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+    let current_user = client
+    .query(&auth_statement, &[&user_id])
+    .await
+    .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
+    .iter()
+    .map(|row| Account::from_row_ref(row).unwrap())
+    .collect::<Vec<Account>>()
+    .pop()
+    .ok_or((StatusCode::NOT_FOUND, format!("Couldn't find account: {:?}", user_id)))?;
+
+    // if !check_permission(&current_user, Permission::Common) {
+    //     return  Err(
+    //         (StatusCode::FORBIDDEN, "Not permitted!".to_string())
+    //     );
+    // }
+    let role: Role = current_user.permissions.try_into().unwrap();
+    Ok(role & needed_permission)
 }
 
 // Possible to create struct Config to maintain envs.
@@ -172,10 +194,10 @@ pub fn verify_jwt(token: String) -> Result<Claims, Error> {
 }
 
 pub async fn handler_sign_in(
-    State(pool): State<Pool>,
+    State(multi_state): State<MultiState>,
     Form(sign_in_form): Form<RequestAccount>
 ) -> Result<axum::Json<String>, (StatusCode, String)> {
-    let client = pool.get().await.unwrap();
+    let client = multi_state.db_pool.get().await.unwrap();
     let user_request: RequestAccount = sign_in_form;
 
     let query_statement = client
@@ -225,10 +247,10 @@ pub async fn handler_sign_in(
 }
 
 pub async fn handler_sign_up(
-    State(pool): State<Pool>,
+    State(multi_state): State<MultiState>,
     Form(sign_up_form): Form<RequestAccount>
 ) -> Result<axum::Json<String>, (StatusCode, String)> {
-    let client = pool.get().await.unwrap();
+    let client = multi_state.db_pool.get().await.unwrap();
 
     let user_request = sign_up_form;
 
