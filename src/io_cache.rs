@@ -2,7 +2,6 @@ use axum::extract::State;
 use base64::{prelude::BASE64_URL_SAFE, Engine};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use tokio_pg_mapper_derive::PostgresMapper;
 use std::path::{Path, PathBuf};
 use std::fs::create_dir;
 use axum::{
@@ -22,8 +21,7 @@ use crate::MultiState;
 
 // use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-#[derive(Serialize, Deserialize, PostgresMapper)]
-#[pg_mapper(table = "RequestUploadPic")]
+#[derive(Serialize, Deserialize)]
 pub struct RequestUploadPic {
     user_id: String   
 }
@@ -52,7 +50,7 @@ fn __obtain_dir(user_email: &String) -> Result<PathBuf, String> {
     return Ok(user_dir_path);
 }
 
-pub async fn handler_recieve_uploaded_pic(
+pub async fn handler_upload_pic(
     State(multi_state): State<MultiState>,
     RoutePath(user): RoutePath<RequestUploadPic>, 
     mut multipart: Multipart
@@ -83,7 +81,7 @@ pub async fn handler_recieve_uploaded_pic(
     Err((StatusCode::NOT_ACCEPTABLE, "没有上传文件或上传文件不合法".to_string()))
 }
 
-pub async fn handler_recieve_uploaded_dataset(
+pub async fn handler_upload_dset(
     State(multi_state): State<MultiState>,
     RoutePath((user_id, file_name)): RoutePath<(String, String)>,
     request: Request,
