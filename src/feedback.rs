@@ -1,6 +1,5 @@
 use chrono::Utc;
 use axum::{extract::State, http::StatusCode, Form};
-use deadpool_postgres::Pool;
 use postgres::types::ToSql;
 use serde::{Deserialize, Serialize};
 use tokio_pg_mapper_derive::PostgresMapper;

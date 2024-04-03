@@ -1,7 +1,6 @@
 use axum::extract::State;
 use base64::{prelude::BASE64_URL_SAFE, Engine};
 use chrono::Utc;
-use deadpool_postgres::Pool;
 use serde::{Deserialize, Serialize};
 use tokio_pg_mapper_derive::PostgresMapper;
 use std::path::{Path, PathBuf};

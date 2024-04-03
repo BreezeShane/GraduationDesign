@@ -1,5 +1,4 @@
 use axum::{extract::State, http::StatusCode, Form, Json};
-use deadpool_postgres::Pool;
 use serde::{Deserialize, Serialize};
 use tokio_pg_mapper::FromTokioPostgresRow;
 
