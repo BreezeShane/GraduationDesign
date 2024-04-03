@@ -1,5 +1,6 @@
-pub mod cache;
+pub mod daemon;
 pub mod config;
+pub mod io_cache;
 pub mod feedback;
 pub mod user_manager;
 pub mod doc_database;
@@ -11,10 +12,10 @@ pub mod training_show;
 use std::sync::{Arc, Mutex};
 //use tokio::sync::Mutex;
 use authenticator::{handler_sign_in, handler_sign_out, handler_sign_up, middleware_authorize};
-use cache::{handler_recieve_uploaded_dataset, handler_recieve_uploaded_pic};
+use io_cache::{handler_upload_dset, handler_upload_pic};
 use config::{DATASETS_STORED_PATH, QUEUE_STORED_PATH};
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
-use feedback::handler_feedback;
+use feedback::{handler_acc_rej_fb, handler_fetch_fb, handler_subm_fb};
 use model_manager::handler_xch_dset_stat;
 use tokio_postgres::{Config, NoTls};
 use axum::{
@@ -83,16 +84,19 @@ async fn main() {
     
     let app = Router::new() 
     // .route("/:user_id/result", get())
-        .route("/:user_id/upload_pic", post(handler_recieve_uploaded_pic))
-        .route("/:user_id/feedback", post(handler_feedback))
+        .route("/:user_id/upload_pic", post(handler_upload_pic))
+        .route("/:user_id/subm_fb", post(handler_subm_fb))
+
     // .route("/admin/:user_id/", get())
-        .route("/admin/xch_dset_stat", post(handler_xch_dset_stat))
-    // .route("/admin/:user_id/feedback_manage", get())
+        .route("/admin/:user_id/feedback_manage", get(handler_fetch_fb).post(handler_acc_rej_fb))
         .route("/admin/:user_id/user_manage", post(handler_ban_or_unban_user))
-    // .route("/admin/:user_id/training_effect", get())
-    // .route("/admin/:user_id/training_panel", get())
-        .route("/admin/:user_id/dataset_manage/:file_name", post(handler_recieve_uploaded_dataset))
-    // .route("/admin/:user_id/model_backup", get())
+    
+        .route("/admin/xch_dset_stat", post(handler_xch_dset_stat))
+        .route("/admin/:user_id/dataset_manage/:file_name", post(handler_upload_dset))
+        // .route("/admin/:user_id/training_panel", get())
+        // .route("/admin/:user_id/model_backup", get())
+        // .route("/admin/:user_id/training_effect", get())
+
         .route("/sign_out/:user_id", get(handler_sign_out))
         .route_layer(middleware::from_fn(middleware_authorize))
         .route("/", get(|| async { "Hello, World!" }))

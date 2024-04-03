@@ -1,6 +1,5 @@
 use data_encoding::HEXUPPER;
 use serde::{Serialize, Deserialize};
-use tokio_pg_mapper_derive::PostgresMapper;
 use std::{fs::{self, File}, io::{BufRead, BufReader, Write}, path::{Path, PathBuf}};
 use crate::config::{
     QUEUE_MAX_LENGTH, 
@@ -9,8 +8,7 @@ use crate::config::{
 };
 
 
-#[derive(Serialize, Deserialize, Clone, PostgresMapper)]
-#[pg_mapper(table = "Dataset")]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Dataset {
     pub name: String,
     pub timestamp: i64,

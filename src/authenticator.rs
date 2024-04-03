@@ -116,8 +116,7 @@ pub struct Account {
     pub available: bool,
 }
 
-#[derive(Serialize, Deserialize, PostgresMapper)]
-#[pg_mapper(table = "RequestAccount")]
+#[derive(Serialize, Deserialize)]
 pub struct RequestAccount {
     id: u32,
     nick_name: String,
