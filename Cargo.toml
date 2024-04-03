@@ -12,13 +12,17 @@ name = "Insect Detect System Network"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+axum-macros = "0.4.1"
+
 axum = { version = "0.7.4", features = ["ws", "multipart"]}
 tokio = { version = "1.36.0", features = ["full"] }
+futures = "0.3.30"
 tower = "0.4.13"
 postgres = "0.19.7"
 deadpool = "0.10.0"
 deadpool-postgres = "0.12.1"
 deadpool-redis = "0.14.0"
+tokio-util = "0.7.10"
 tokio-postgres = "0.7.10"
 tokio-pg-mapper = "0.2.0"
 tokio-pg-mapper-derive = "0.2.0"
