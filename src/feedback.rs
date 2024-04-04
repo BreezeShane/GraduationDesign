@@ -1,8 +1,12 @@
+use axum::extract::Path;
+use axum::response::{IntoResponse, Response};
 use axum::Json;
 use chrono::Utc;
 use axum::{extract::State, http::StatusCode, Form};
+use deadpool_postgres::Pool;
 use postgres::types::ToSql;
 use serde::{Deserialize, Serialize};
+use tokio_postgres::row::Row;
 
 use crate::authenticator::{check_permission, Permission};
 use crate::io_cache::obtain_dir;
@@ -25,6 +29,24 @@ pub struct Feedback {
     pic_path: String,
     real_label: Option<String>,
     acceptable: bool
+}
+
+impl Feedback {
+    fn from_row_ref(row: &Row, trainable: bool) -> Self {
+        let mut fb = Feedback {
+            timestamp: row.get("time_stamp"),
+            from_user_email: row.get("from_user_email"),
+            deadline: None,
+            pic_path: row.get("pic_path"),
+            real_label: None,
+            acceptable: false
+        };
+        if trainable {
+            fb.deadline = row.get("time_out");
+            fb.real_label = row.get("real_label");
+        }
+        fb
+    }
 }
 
 pub async fn handler_subm_fb(
@@ -165,13 +187,58 @@ pub async fn handler_subm_fb(
 
 pub async fn handler_fetch_fb(
     State(multi_state): State<MultiState>,
-) -> Result<Json<Feedback>, (StatusCode, String)> {
-    todo!()
+    Path(user_id): Path<String>
+) -> Result<Response, (StatusCode, String)> {
+    if !check_permission(&multi_state.db_pool, &user_id, Permission::MngFeedBack).await.unwrap() {
+        return Err(
+            (StatusCode::FORBIDDEN, "Not permitted!".to_string())
+        );
+    }
+
+    let mut vec_tfbs = _fetch_fb(&multi_state.db_pool, true).await;
+    let mut vec_ufbs =  _fetch_fb(&multi_state.db_pool, false).await;
+
+    let fbs = vec_tfbs.append(&mut vec_ufbs);
+    // let json = serde_json::to_string(&fbs);
+    return Ok(Json(fbs).into_response());
+}
+
+async fn _fetch_fb(pool: &Pool, trainable: bool) -> Vec<Feedback> {
+    let client = pool.get().await.unwrap();
+    let query_str = match trainable {
+        true => "
+            SELECT id,time_stamp,from_user_email,time_out,pic_link,real_label,acceptable FROM TFeedback;
+        ",
+        false => "
+            SELECT id,time_stamp,from_user_email,pic_link,acceptable FROM UFeedback;
+        "
+    };
+
+    let query_tfb_statement = client
+        .prepare(query_str)
+        .await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string())).unwrap();
+
+    let vec_fb: Vec<Feedback> = client
+        .query(&query_tfb_statement, &[])
+        .await
+        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string())).unwrap() 
+        .iter()
+        .map(|row| Feedback::from_row_ref(row, trainable))
+        .collect::<Vec<Feedback>>();
+
+    vec_fb
 }
 
 pub async fn handler_acc_rej_fb(
     State(multi_state): State<MultiState>,
     Form(user_feedback): Form<RequestFeedback>
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
+    if !check_permission(&multi_state.db_pool, &user_feedback.user_id, Permission::MngFeedBack).await.unwrap() {
+        return Err(
+            (StatusCode::FORBIDDEN, "Not permitted!".to_string())
+        );
+    }
+
+    
     todo!()
 }

@@ -24,7 +24,7 @@ impl<F> Task<F>
 }
 
 pub struct Timer {
-    obj: Runtime,
+    runtime: Runtime,
     duration: u64
 }
 
@@ -50,7 +50,7 @@ impl Cronie for Daemon {
 
     fn append_task(&mut self, task: RefTask) -> ResponseType {
         let timer = Box::new(Timer {
-            obj: Runtime::new().unwrap(),
+            runtime: Runtime::new().unwrap(),
             duration: TIMER_DURATION
         });
         self.push((timer, task));
@@ -89,7 +89,7 @@ impl Cronie for Daemon {
     fn start(&self) -> ResponseType {
         let tuples = self.iter();
         for tuple in tuples {
-            let rt = &tuple.0.obj;
+            let rt = &tuple.0.runtime;
             let duration = tuple.0.duration;
             let task = &tuple.1.closure;
             
