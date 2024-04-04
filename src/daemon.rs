@@ -1,3 +1,4 @@
+use deadpool_postgres::Pool;
 use tokio::{
     runtime::Runtime,
     time::{interval, Duration, MissedTickBehavior}
@@ -5,14 +6,14 @@ use tokio::{
 use crate::config::TIMER_DURATION;
 
 pub struct Task<F>
-    where F: Fn() + ?Sized
+    where F: Fn(&Pool) + ?Sized
 {
     name: String,
     closure: F
 }
 
 impl<F> Task<F> 
-    where F: Fn()
+    where F: Fn(&Pool)
 {
     pub fn new(name: &str, closure: F) -> Box<Self> {
         let name = name.to_string();
@@ -30,7 +31,7 @@ pub struct Timer {
 
 
 pub type RefTimer = Box<Timer>;
-pub type RefTask = Box<Task<dyn Fn()>>;
+pub type RefTask = Box<Task<dyn Fn(&Pool)>>;
 pub type Daemon = Vec< (RefTimer, RefTask) >;
 type ResponseType = Result<(), String>;
 
@@ -40,7 +41,7 @@ pub trait Cronie {
     fn srch_task(&self, task_name: &String) -> Option<usize>;
     fn rm_task(&mut self, task_name: &String) -> ResponseType;
     fn update_duration(&mut self, task_name: &String, duration: u64) -> ResponseType;
-    fn start(&self) -> ResponseType;
+    fn start(&self, multi_state: &Pool) -> ResponseType;
 }
 
 impl Cronie for Daemon {
@@ -86,7 +87,7 @@ impl Cronie for Daemon {
         Ok(())
     }
 
-    fn start(&self) -> ResponseType {
+    fn start(&self, multi_state: &Pool) -> ResponseType {
         let tuples = self.iter();
         for tuple in tuples {
             let rt = &tuple.0.runtime;
@@ -100,7 +101,7 @@ impl Cronie for Daemon {
                 intv.set_missed_tick_behavior(MissedTickBehavior::Delay);
     
                 intv.tick().await;
-                task();
+                task(multi_state);
             });
         }
         Ok(())

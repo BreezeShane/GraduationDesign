@@ -79,6 +79,8 @@ async fn main() {
         )
     };
 
+    let pool = &multi_state.db_pool.clone();
+
     // build our application with a single route
     
     let app = Router::new() 
@@ -102,17 +104,17 @@ async fn main() {
         .route("/", get(|| async { "Hello, World!" }))
         .route("/sign_in", post(handler_sign_in))
         .route("/sign_up", post(handler_sign_up))
-        .with_state(multi_state)
+        .with_state(multi_state.clone())
         .layer(DefaultBodyLimit::max(1024));
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 
-    let feedback_manage_task = Task::new("auto_acc_fd", || {
+    let feedback_manage_task = Task::new("auto_rej_fd", |pool| {
         todo!()
     });
-    let model_backup_task = Task::new("auto_bak_mod", || {
+    let model_backup_task = Task::new("auto_bak_mod", |pool| {
         todo!()
     });
 
@@ -120,5 +122,5 @@ async fn main() {
     let _ = glob_daemon.append_task(feedback_manage_task);
     let _ = glob_daemon.append_task(model_backup_task);
 
-    let _ = glob_daemon.start();
+    let _ = glob_daemon.start(&pool);
 }
