@@ -48,8 +48,15 @@ fn main() -> Result<(), Error> {
     // init data source folder.
     const USER_PIC_PATH: &str = "./data_src/";
     const DATASETS_DIRECTORY: &str = "./datasets/";
-    init_dir(USER_PIC_PATH);
-    init_dir(DATASETS_DIRECTORY);
+    const MODEL_STORED_PATH: &str = "./model/";
+    const MODEL_BACKUP_STORED_PATH: &str = "./.modbak/";
+    let vec_path = vec![
+        USER_PIC_PATH,
+        DATASETS_DIRECTORY,
+        MODEL_STORED_PATH,
+        MODEL_BACKUP_STORED_PATH,
+    ];
+    init_dir(vec_path);
 
     // init document database storage file
     const QUEUE_STORED_PATH: &str = "./queue.db";
@@ -60,14 +67,19 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn init_dir(path: &str) {
-    let src_path = Path::new(path);
-    if !src_path.exists() {
-        match create_dir(&src_path) {
-            Ok(_) => println!("Root Src Directory initialized."),
-            Err(e) => println!("Error creating root directory: {}", e)
+fn init_dir(vec_path: Vec<&str>) {
+    let iter = vec_path.iter();
+
+    for path in iter {
+        let src_path = Path::new(path);
+        if !src_path.exists() {
+            match create_dir(src_path) {
+                Ok(_) => println!("Root Src Directory initialized."),
+                Err(e) => println!("Error creating root directory: {}", e)
+            }
         }
     }
+    
 }
 
 fn touch_file(path: &str) {

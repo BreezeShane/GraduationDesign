@@ -16,3 +16,7 @@ pub const FEEDBACK_EXPIRATION: i64 = 86400;
 
 // daemon.rs
 pub const TIMER_DURATION: u64 = 3600;
+
+// main.rs + model_manage.rs
+pub const MODEL_STORED_PATH: &str = "./model/";
+pub const MODEL_BACKUP_STORED_PATH: &str = "./.modbak/";
