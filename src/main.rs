@@ -87,8 +87,8 @@ async fn main() {
         .route("/:user_id/subm_fb", post(handler_subm_fb))
 
     // .route("/admin/:user_id/", get())
-        .route("/admin/:user_id/feedback_manage", get(handler_fetch_fb).post(handler_acc_rej_fb))
-        .route("/admin/:user_id/user_manage", post(handler_ban_or_unban_user))
+        .route("/admin/feedback_manage", get(handler_fetch_fb).post(handler_acc_rej_fb))
+        .route("/admin/user_manage", post(handler_ban_or_unban_user))
     
         .route("/admin/xch_dset_stat", post(handler_xch_dset_stat))
         .route("/admin/:user_id/dataset_manage/:file_name", post(handler_upload_dset))
