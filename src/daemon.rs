@@ -4,25 +4,37 @@ use tokio::{
 };
 use crate::config::TIMER_DURATION;
 
-struct Task<F>
+pub struct Task<F>
     where F: Fn() + ?Sized
 {
     name: String,
     closure: F
 }
 
-struct Timer {
+impl<F> Task<F> 
+    where F: Fn()
+{
+    pub fn new(name: &str, closure: F) -> Box<Self> {
+        let name = name.to_string();
+        Box::new(Task {
+            name,
+            closure
+        })
+    }
+}
+
+pub struct Timer {
     obj: Runtime,
     duration: u64
 }
 
 
-type RefTimer = Box<Timer>;
-type RefTask = Box<Task<dyn Fn()>>;
-type Daemon = Vec< (RefTimer, RefTask) >;
+pub type RefTimer = Box<Timer>;
+pub type RefTask = Box<Task<dyn Fn()>>;
+pub type Daemon = Vec< (RefTimer, RefTask) >;
 type ResponseType = Result<(), String>;
 
-trait Cronie {
+pub trait Cronie {
     fn new() -> Self;
     fn append_task(&mut self, task: RefTask) -> ResponseType;
     fn srch_task(&self, task_name: &String) -> Option<usize>;

@@ -12,6 +12,7 @@ pub mod training_show;
 use std::sync::{Arc, Mutex};
 //use tokio::sync::Mutex;
 use authenticator::{handler_sign_in, handler_sign_out, handler_sign_up, middleware_authorize};
+use daemon::{Cronie, Daemon, Task};
 use io_cache::{handler_upload_dset, handler_upload_pic};
 use config::{DATASETS_STORED_PATH, QUEUE_STORED_PATH};
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
@@ -35,24 +36,22 @@ pub struct MultiState {
     dset_db: Arc<Mutex<DatasetVec>>,
     train_queue: Arc<Mutex<Queue>>
 }
-
 impl FromRef<MultiState> for Pool {
     fn from_ref(input: &MultiState) -> Self {
         input.db_pool.clone()
     }
 }
-
 impl FromRef<MultiState> for Arc<Mutex<DatasetVec>> {
     fn from_ref(input: &MultiState) -> Self {
         input.dset_db.clone()
     }
 }
-
 impl FromRef<MultiState> for Arc<Mutex<Queue>> {
     fn from_ref(input: &MultiState) -> Self {
         input.train_queue.clone()
     }
 }
+
 
 #[tokio::main]
 async fn main() {
@@ -108,4 +107,17 @@ async fn main() {
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080").await.unwrap();
     axum::serve(listener, app).await.unwrap();
+
+    let feedback_manage_task = Task::new("auto_acc_fd", || {
+        todo!()
+    });
+    let model_backup_task = Task::new("auto_bak_mod", || {
+        todo!()
+    });
+
+    let mut glob_daemon = Daemon::new();
+    let _ = glob_daemon.append_task(feedback_manage_task);
+    let _ = glob_daemon.append_task(model_backup_task);
+
+    let _ = glob_daemon.start();
 }
