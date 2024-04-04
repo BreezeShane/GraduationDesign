@@ -31,7 +31,6 @@ trait Cronie {
     fn rm_task(&mut self, task: RefTask) -> ResponseType;
     fn update_duration(&mut self, duration: u64) -> ResponseType;
     fn start(&self) -> ResponseType;
-    fn stop(&self) -> ResponseType;
 }
 
 impl Cronie for Daemon {
@@ -91,9 +90,5 @@ impl Cronie for Daemon {
             }
         });
         Ok(())
-    }
-
-    fn stop(&self) -> ResponseType {
-        todo!()
     }
 }
