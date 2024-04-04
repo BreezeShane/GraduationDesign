@@ -16,79 +16,82 @@ struct Timer {
     duration: u64
 }
 
-struct Daemon{
-    tasks: Vec<Box<Task<dyn Fn()>>>,
-    timer: Box<Timer>
-}
 
+type RefTimer = Box<Timer>;
 type RefTask = Box<Task<dyn Fn()>>;
+type Daemon = Vec< (RefTimer, RefTask) >;
 type ResponseType = Result<(), String>;
 
 trait Cronie {
     fn new() -> Self;
     fn append_task(&mut self, task: RefTask) -> ResponseType;
     fn srch_task(&self, task_name: &String) -> Option<usize>;
-    fn rm_task(&mut self, task: RefTask) -> ResponseType;
-    fn update_duration(&mut self, duration: u64) -> ResponseType;
+    fn rm_task(&mut self, task_name: &String) -> ResponseType;
+    fn update_duration(&mut self, task_name: &String, duration: u64) -> ResponseType;
     fn start(&self) -> ResponseType;
 }
 
 impl Cronie for Daemon {
     fn new() -> Self {
-        let timer = Timer {
-            obj: Runtime::new().unwrap(),
-            duration: TIMER_DURATION
-        };
-        Daemon {
-            tasks: Vec::new(),
-            timer: Box::new(timer)
-        }
+        Vec::new()
     }
 
     fn append_task(&mut self, task: RefTask) -> ResponseType {
-        self.tasks.push(task);
+        let timer = Box::new(Timer {
+            obj: Runtime::new().unwrap(),
+            duration: TIMER_DURATION
+        });
+        self.push((timer, task));
         Ok(())
     }
 
     fn srch_task(&self, task_name: &String) -> Option<usize> {
-        self.tasks.iter().position(
-            |task| task.name == *task_name 
+        self.iter().position(
+            |(_, task)| task.name == *task_name 
         )
     }
 
-    fn rm_task(&mut self, task: RefTask) -> ResponseType {
-        let index = self.srch_task(&task.name);
+    fn rm_task(&mut self, task_name: &String) -> ResponseType {
+        let index = self.srch_task(&task_name);
         match index {
-            None => return Err(format!("Task(named: {}) doesn't exist!", task.name)),
+            None => return Err(format!("Task(named: {}) doesn't exist!", task_name)),
             Some(ind) => {
-                // may to stop task first
-                let _ = self.tasks.remove(ind);
+                let _ = self.remove(ind);
                 Ok(())
             }
         }
     }
 
-    fn update_duration(&mut self, duration: u64) -> ResponseType {
-        let timer = self.timer.as_mut();
-        timer.duration = duration; 
+    fn update_duration(&mut self, task_name: &String, duration: u64) -> ResponseType {
+        let index = self.srch_task(task_name);
+        match index {
+            None => return Err(format!("Task(named: {}) doesn't exist!", task_name)),
+            Some(i) => {
+                let timer = self.get_mut(i).unwrap().0.as_mut();
+                timer.duration = duration; 
+            }
+        }
         Ok(())
     }
 
     fn start(&self) -> ResponseType {
-        let rt = &self.timer.obj;
-        let task_iter = self.tasks.iter();
-        rt.block_on(async {
-            // let start = Instant::now();
-            let dur = Duration::from_secs(TIMER_DURATION);
-            let mut intv = interval(dur);
-            intv.set_missed_tick_behavior(MissedTickBehavior::Delay);
-
-            for task_ref in task_iter {
-                let task = &task_ref.closure;
+        let tuples = self.iter();
+        for tuple in tuples {
+            let rt = &tuple.0.obj;
+            let duration = tuple.0.duration;
+            let task = &tuple.1.closure;
+            
+            rt.block_on(async {
+                // let start = Instant::now();
+                let dur = Duration::from_secs(duration);
+                let mut intv = interval(dur);
+                intv.set_missed_tick_behavior(MissedTickBehavior::Delay);
+    
                 intv.tick().await;
                 task();
-            }
-        });
+            });
+        }
         Ok(())
     }
 }
+
