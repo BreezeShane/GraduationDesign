@@ -84,8 +84,8 @@ async fn main() {
     let app = Router::new() 
     // .route("/:user_id/result", get())
         .route("/:user_id/upload_pic", post(handler_upload_pic))
-        .route("/:user_id/label_pic", get(handler_fetch_ufb).post(handler_label_pic))
-        .route("/:user_id/subm_fb", post(handler_subm_fb))
+        .route("/user/label_pic", get(handler_fetch_ufb).post(handler_label_pic))
+        .route("/user/subm_fb", post(handler_subm_fb))
 
     // .route("/admin/:user_id/", get())
         .route("/admin/feedback_manage", get(handler_fetch_all_fb).post(handler_acc_rej_fb))
