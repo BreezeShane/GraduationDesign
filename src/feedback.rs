@@ -1,4 +1,6 @@
-use axum::extract::Path;
+use std::path::PathBuf;
+
+use axum::extract::Query;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use chrono::Utc;
@@ -9,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use tokio_postgres::row::Row;
 
 use crate::authenticator::{check_permission, Permission};
+use crate::doc_database::{TrainingTask, QueueTrait};
 use crate::io_cache::obtain_dir;
 use crate::config::FEEDBACK_EXPIRATION;
 use crate::MultiState;
@@ -19,6 +22,14 @@ pub struct  RequestFeedback {
     user_id: String,
     pic_name: String,
     real_label: Option<String>
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AccRejFeedback {
+    user_id: String,
+    pic_path: String,
+    real_label: String,
+    accept: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -62,13 +73,20 @@ pub async fn handler_subm_fb(
     let (feedback, insert_statement) = (|| -> (Feedback, &str) {
         let feedback;
         let insert_statement;
+        let pic_path = 
+            PathBuf::from(
+                obtain_dir(&user_feedback.user_id)
+                .unwrap()
+            )
+                .join(user_feedback.pic_name).
+                into_os_string().into_string().unwrap();
 
         match user_feedback.real_label {
             None => {
                 feedback = Feedback {
                     timestamp: Utc::now().timestamp(),
                     from_user_email: user_feedback.user_id.clone(),
-                    pic_path: obtain_dir(&user_feedback.user_id).unwrap(),
+                    pic_path,
                     acceptable: false,
                     real_label: None,
                     deadline: None,
@@ -84,7 +102,7 @@ pub async fn handler_subm_fb(
                     timestamp: Utc::now().timestamp(),
                     from_user_email: user_feedback.user_id.clone(),
                     deadline: Some(Utc::now().timestamp() + FEEDBACK_EXPIRATION),
-                    pic_path: obtain_dir(&user_feedback.user_id).unwrap(),
+                    pic_path,
                     real_label: user_feedback.real_label,
                     acceptable: false
                 };
@@ -187,7 +205,7 @@ pub async fn handler_subm_fb(
 
 pub async fn handler_fetch_fb(
     State(multi_state): State<MultiState>,
-    Path(user_id): Path<String>
+    Query(user_id): Query<String>
 ) -> Result<Response, (StatusCode, String)> {
     if !check_permission(&multi_state.db_pool, &user_id, Permission::MngFeedBack).await.unwrap() {
         return Err(
@@ -207,10 +225,10 @@ async fn _fetch_fb(pool: &Pool, trainable: bool) -> Vec<Feedback> {
     let client = pool.get().await.unwrap();
     let query_str = match trainable {
         true => "
-            SELECT id,time_stamp,from_user_email,time_out,pic_link,real_label,acceptable FROM TFeedback;
+            SELECT time_stamp,from_user_email,time_out,pic_link,real_label,acceptable FROM TFeedback;
         ",
         false => "
-            SELECT id,time_stamp,from_user_email,pic_link,acceptable FROM UFeedback;
+            SELECT time_stamp,from_user_email,pic_link,acceptable FROM UFeedback;
         "
     };
 
@@ -231,14 +249,40 @@ async fn _fetch_fb(pool: &Pool, trainable: bool) -> Vec<Feedback> {
 
 pub async fn handler_acc_rej_fb(
     State(multi_state): State<MultiState>,
-    Form(user_feedback): Form<RequestFeedback>
-) -> Result<(StatusCode, String), (StatusCode, String)> {
-    if !check_permission(&multi_state.db_pool, &user_feedback.user_id, Permission::MngFeedBack).await.unwrap() {
+    Form(acc_rej_fb): Form<AccRejFeedback>
+) -> Result<(), (StatusCode, String)> {
+    if !check_permission(&multi_state.db_pool, &acc_rej_fb.user_id, Permission::MngFeedBack).await.unwrap() {
         return Err(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
 
+    let client = multi_state.db_pool.get().await.unwrap();
+    let del_statement = client
+    .prepare("
+        DELETE FROM TFeedback WHERE pic_link = '$1';
+    ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+
+    let pic_path = acc_rej_fb.pic_path;
+    let label = acc_rej_fb.real_label;
     
-    todo!()
+    if acc_rej_fb.accept {
+        let task = TrainingTask {
+            pic_path: pic_path.clone(),
+            label: label.clone()
+        };
+        let mut queue = multi_state.train_queue.lock().unwrap();
+        let _ = queue.append_task(task);
+    }
+    
+    let row = client
+        .execute(&del_statement, &[&pic_path])
+        .await
+        .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+
+    if row < 1 {
+        return Err((StatusCode::NOT_MODIFIED, "Remove trainable data row failed".to_string()));
+    }
+
+    Ok(())
 }

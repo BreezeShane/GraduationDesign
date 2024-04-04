@@ -115,8 +115,8 @@ impl DatasetTrait for DatasetVec {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TrainingTask {
-    pic_path: String,
-    label: String
+    pub pic_path: String,
+    pub label: String
 }
 
 #[derive(Serialize, Deserialize, Clone)]
