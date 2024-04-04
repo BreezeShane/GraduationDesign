@@ -20,7 +20,7 @@ use crate::MultiState;
 #[derive(Serialize, Deserialize)]
 pub struct  RequestFeedback {
     user_id: String,
-    pic_name: String,
+    pic_sublink: String,
     real_label: Option<String>
 }
 
@@ -78,7 +78,7 @@ pub async fn handler_subm_fb(
                 obtain_dir(&user_feedback.user_id)
                 .unwrap()
             )
-                .join(user_feedback.pic_name).
+                .join(user_feedback.pic_sublink).
                 into_os_string().into_string().unwrap();
 
         match user_feedback.real_label {
@@ -203,7 +203,7 @@ pub async fn handler_subm_fb(
     Ok((StatusCode::OK, "Succeed to submit the feedback!".to_string()))
 }
 
-pub async fn handler_fetch_fb(
+pub async fn handler_fetch_all_fb(
     State(multi_state): State<MultiState>,
     Query(user_id): Query<String>
 ) -> Result<Response, (StatusCode, String)> {
@@ -213,12 +213,12 @@ pub async fn handler_fetch_fb(
         );
     }
 
-    let mut vec_tfbs = _fetch_fb(&multi_state.db_pool, true).await;
-    let mut vec_ufbs =  _fetch_fb(&multi_state.db_pool, false).await;
+    let vec_tfbs = _fetch_fb(&multi_state.db_pool, true).await;
+    let vec_ufbs =  _fetch_fb(&multi_state.db_pool, false).await;
 
-    let fbs = vec_tfbs.append(&mut vec_ufbs);
-    // let json = serde_json::to_string(&fbs);
-    return Ok(Json(fbs).into_response());
+    return Ok(
+        Json((vec_tfbs, vec_ufbs)).into_response()
+    );
 }
 
 async fn _fetch_fb(pool: &Pool, trainable: bool) -> Vec<Feedback> {
@@ -284,5 +284,79 @@ pub async fn handler_acc_rej_fb(
         return Err((StatusCode::NOT_MODIFIED, "Remove trainable data row failed".to_string()));
     }
 
+    Ok(())
+}
+
+
+pub async fn handler_fetch_ufb(
+    State(multi_state): State<MultiState>,
+    Query(user_id): Query<String>
+) -> Result<Response, (StatusCode, String)> {
+    if !check_permission(&multi_state.db_pool, &user_id, Permission::MngFeedBack).await.unwrap() {
+        return Err(
+            (StatusCode::FORBIDDEN, "Not permitted!".to_string())
+        );
+    }
+
+    let vec_ufbs =  _fetch_fb(&multi_state.db_pool, false).await;
+
+    return Ok(
+        Json(vec_ufbs).into_response()
+    );
+}
+
+pub async fn handler_label_pic(
+    State(multi_state): State<MultiState>,
+    Form(request_feedback): Form<RequestFeedback>
+) -> Result<(), (StatusCode, String)> {
+    if let None = request_feedback.real_label {
+        return Err((StatusCode::CONFLICT, "Not set the label!".to_string()));
+    }
+
+    let fb = Feedback {
+        timestamp: Utc::now().timestamp(),
+        from_user_email: request_feedback.user_id,
+        deadline: Some(Utc::now().timestamp() + FEEDBACK_EXPIRATION),
+        pic_path: request_feedback.pic_sublink,
+        real_label: request_feedback.real_label,
+        acceptable: false
+    };
+
+    let client = multi_state.db_pool.get().await.unwrap();
+    let del_statement = client
+    .prepare("
+        DELETE FROM UFeedback WHERE pic_link = '$1';
+    ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+    let insert_statement = client
+    .prepare("
+        INSERT INTO TFeedback (time_stamp, from_user_email, time_out, pic_link, real_label, acceptable)
+        VALUES
+        ($1, $2, $3, $4, $5, $6)
+    ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+
+    let insert_row = client
+            .execute(&insert_statement, 
+                &[
+                    &fb.timestamp, &fb.from_user_email, &fb.deadline, 
+                    &fb.pic_path, &fb.real_label, &fb.acceptable
+                ])
+            .await
+            .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()));
+
+    if let Ok(ins_count) = insert_row {
+        if ins_count < 1 {
+            return Err((StatusCode::NOT_MODIFIED, "Failed to insert new trainable feedback!".to_string()));
+        }
+        let delet_row = client
+        .execute(&del_statement, 
+            &[
+                &fb.pic_path
+            ])
+        .await
+        .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+        if delet_row < 1 {
+            return Err((StatusCode::NOT_MODIFIED, "Failed to delete original untrainable feedback!".to_string()));
+        }
+    }
     Ok(())
 }

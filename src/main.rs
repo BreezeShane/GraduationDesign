@@ -16,7 +16,7 @@ use daemon::{Cronie, Daemon, Task};
 use io_cache::{handler_upload_dset, handler_upload_pic};
 use config::{DATASETS_STORED_PATH, QUEUE_STORED_PATH};
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
-use feedback::{handler_acc_rej_fb, handler_fetch_fb, handler_subm_fb};
+use feedback::{handler_acc_rej_fb, handler_fetch_all_fb, handler_fetch_ufb, handler_label_pic, handler_subm_fb};
 use model_manager::handler_xch_dset_stat;
 use tokio_postgres::{Config, NoTls};
 use axum::{
@@ -84,10 +84,11 @@ async fn main() {
     let app = Router::new() 
     // .route("/:user_id/result", get())
         .route("/:user_id/upload_pic", post(handler_upload_pic))
+        .route("/:user_id/label_pic", get(handler_fetch_ufb).post(handler_label_pic))
         .route("/:user_id/subm_fb", post(handler_subm_fb))
 
     // .route("/admin/:user_id/", get())
-        .route("/admin/feedback_manage", get(handler_fetch_fb).post(handler_acc_rej_fb))
+        .route("/admin/feedback_manage", get(handler_fetch_all_fb).post(handler_acc_rej_fb))
         .route("/admin/user_manage", post(handler_ban_or_unban_user))
     
         .route("/admin/xch_dset_stat", post(handler_xch_dset_stat))
