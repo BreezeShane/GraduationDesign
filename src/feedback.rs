@@ -260,7 +260,7 @@ pub async fn handler_acc_rej_fb(
     let client = multi_state.db_pool.get().await.unwrap();
     let del_statement = client
     .prepare("
-        DELETE FROM TFeedback WHERE pic_link = '$1';
+        DELETE FROM TFeedback WHERE pic_link='$1';
     ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
     let pic_path = acc_rej_fb.pic_path;
@@ -325,7 +325,7 @@ pub async fn handler_label_pic(
     let client = multi_state.db_pool.get().await.unwrap();
     let del_statement = client
     .prepare("
-        DELETE FROM UFeedback WHERE pic_link = '$1';
+        DELETE FROM UFeedback WHERE pic_link='$1';
     ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
     let insert_statement = client
     .prepare("

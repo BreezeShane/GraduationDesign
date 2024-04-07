@@ -1,107 +1,91 @@
-use deadpool_postgres::Pool;
+use crate::config::TIMER_DURATION;
+use std::collections::HashMap;
 use tokio::{
     runtime::Runtime,
     time::{interval, Duration, MissedTickBehavior}
 };
-use crate::config::TIMER_DURATION;
 
-pub struct Task<F>
-    where F: Fn(&Pool) + ?Sized
-{
-    name: String,
-    closure: F
-}
-
-impl<F> Task<F> 
-    where F: Fn(&Pool)
-{
-    pub fn new(name: &str, closure: F) -> Box<Self> {
-        let name = name.to_string();
-        Box::new(Task {
-            name,
-            closure
-        })
-    }
-}
-
-pub struct Timer {
-    runtime: Runtime,
-    duration: u64
-}
-
-
-pub type RefTimer = Box<Timer>;
-pub type RefTask = Box<Task<dyn Fn(&Pool)>>;
-pub type Daemon = Vec< (RefTimer, RefTask) >;
 type ResponseType = Result<(), String>;
+type ClosureType = dyn Fn() -> ResponseType;
+pub type RefTimer = Box<Timer<ClosureType>>;
+pub type Daemon = HashMap<String, RefTimer>;
+// type AsyncFn = Box<dyn Fn(&Object<Manager>) -> Pin<Box<dyn Future<Output = ResponseType>>>>;
+
+pub struct Timer<T>
+    where T: Fn()->ResponseType + ?Sized
+{
+    runtime: Runtime,
+    duration: u64,
+    task: Box<T>
+}
 
 pub trait Cronie {
     fn new() -> Self;
-    fn append_task(&mut self, task: RefTask) -> ResponseType;
-    fn srch_task(&self, task_name: &String) -> Option<usize>;
+    fn append_task(&mut self, task_name: &str, task: Box<ClosureType>) -> ResponseType;
     fn rm_task(&mut self, task_name: &String) -> ResponseType;
     fn update_duration(&mut self, task_name: &String, duration: u64) -> ResponseType;
-    fn start(&self, multi_state: &Pool) -> ResponseType;
+    fn start(&self) -> ResponseType;
 }
 
 impl Cronie for Daemon {
     fn new() -> Self {
-        Vec::new()
+        HashMap::new()
     }
 
-    fn append_task(&mut self, task: RefTask) -> ResponseType {
+    fn append_task(&mut self, task_name: &str, task: Box<ClosureType>) -> ResponseType {
         let timer = Box::new(Timer {
             runtime: Runtime::new().unwrap(),
-            duration: TIMER_DURATION
+            duration: TIMER_DURATION,
+            task
         });
-        self.push((timer, task));
+        self.insert(task_name.to_string(), timer);
         Ok(())
     }
 
-    fn srch_task(&self, task_name: &String) -> Option<usize> {
-        self.iter().position(
-            |(_, task)| task.name == *task_name 
-        )
-    }
-
     fn rm_task(&mut self, task_name: &String) -> ResponseType {
-        let index = self.srch_task(&task_name);
-        match index {
-            None => return Err(format!("Task(named: {}) doesn't exist!", task_name)),
-            Some(ind) => {
-                let _ = self.remove(ind);
-                Ok(())
-            }
+        if self.contains_key(task_name) {
+            self.remove(task_name);
+            return Ok(());
+        } else {
+            return Err(format!("Task: {task_name} doesn't exist!"));
         }
     }
 
     fn update_duration(&mut self, task_name: &String, duration: u64) -> ResponseType {
-        let index = self.srch_task(task_name);
-        match index {
-            None => return Err(format!("Task(named: {}) doesn't exist!", task_name)),
-            Some(i) => {
-                let timer = self.get_mut(i).unwrap().0.as_mut();
-                timer.duration = duration; 
-            }
+        if self.contains_key(task_name) {
+            let timer = self.get_mut(task_name).unwrap();
+            timer.duration = duration;
+            return Ok(());
+        } else {
+            return Err(format!("Task: {task_name} doesn't exist!"));
         }
-        Ok(())
     }
 
-    fn start(&self, multi_state: &Pool) -> ResponseType {
-        let tuples = self.iter();
-        for tuple in tuples {
-            let rt = &tuple.0.runtime;
-            let duration = tuple.0.duration;
-            let task = &tuple.1.closure;
+    // async fn __exec_raw(closure: &F, pool: &Object<Manager>) -> ResponseType {
+    //     closure(pool);
+    //     todo!()
+    // }
+
+    fn start(&self) -> ResponseType {
+        let timers = self.values();
+        for timer in timers {
+            let rt = &timer.runtime;
+            let duration = timer.duration;
+            let task = &timer.task;
             
-            rt.block_on(async {
+            let _ = rt.block_on(async {
                 // let start = Instant::now();
                 let dur = Duration::from_secs(duration);
                 let mut intv = interval(dur);
                 intv.set_missed_tick_behavior(MissedTickBehavior::Delay);
     
                 intv.tick().await;
-                task(multi_state);
+                let status = task();
+                
+                if let Err(e) = status {
+                    return Err(e);
+                }
+                Ok(())
             });
         }
         Ok(())
