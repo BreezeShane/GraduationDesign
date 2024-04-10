@@ -6,7 +6,21 @@
 <code>Insect-Identifier
 ├── Cargo.lock
 ├── Cargo.toml
-├── data_src
+├── deep_learning_service
+│   ├── deep_learning_service
+│   │   ├── asgi.py
+│   │   ├── __init__.py
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   ├── dl_svc
+│   │   ├── apis.py
+│   │   ├── datasetloader.py
+│   │   ├── __init__.py
+│   │   ├── network.py
+│   │   ├── urls.py
+│   │   └── utils.py
+│   └── manage.py
 ├── frontend_nextjs
 │   ├── next.config.mjs
 │   ├── next-env.d.ts
@@ -32,18 +46,16 @@
     ├── authenticator.rs
     ├── bin
     │   └── init.rs
-    ├── cache.rs
+    ├── config.rs
+    ├── daemon.rs
+    ├── doc_database.rs
     ├── feedback.rs
+    ├── io_cache.rs
     ├── main.rs
-    ├── model_backup.rs
-    ├── Network
-    │   ├── dataset_io.rs
-    │   ├── Network.rs
-    │   └── pic_io.rs
-    ├── training_show.rs
+    ├── model_manager.rs
     └── user_manager.rs
 
-11 directories, 28 files</code>
+12 directories, 39 files</code>
 </pre>
 </details>
 
