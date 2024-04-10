@@ -6,7 +6,6 @@ pub mod user_manager;
 pub mod doc_database;
 pub mod model_manager;
 pub mod authenticator;
-pub mod training_show;
 
 
 use std::{fs::copy, path::PathBuf, sync::{Arc, Mutex}};
