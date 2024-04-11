@@ -76,3 +76,11 @@ sudo su postgres
 createdb InsectSys
 cargo run --bin init # Initialize database.
 ```
+
+## Deep Learning
+
+### Models' Source [[Reference]](https://github.com/facebookresearch/multimodal)
+
+The deep learning model named COCA, which comes from [TorchMultimodal](https://github.com/facebookresearch/multimodal), is the large model in this project here using for insect image classification. Thanks for their excellent works!
+
+However I extract COCA only and edited source code in order to fit the project in plan of applying `deepspeed`, `Lora Adaptation`, `TVM`, etc.
