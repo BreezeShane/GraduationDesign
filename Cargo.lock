@@ -653,6 +653,7 @@ dependencies = [
  "pin-project-lite",
  "smallvec",
  "tokio",
+ "want",
 ]
 
 [[package]]
@@ -756,6 +757,7 @@ dependencies = [
  "deadpool-postgres",
  "futures",
  "hmac",
+ "hyper 1.2.0",
  "hyper-proxy",
  "jwt",
  "pbkdf2",

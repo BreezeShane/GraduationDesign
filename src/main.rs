@@ -6,7 +6,7 @@ pub mod user_manager;
 pub mod doc_database;
 pub mod model_manager;
 pub mod authenticator;
-
+pub mod dl_svc;
 
 use std::{fs::copy, path::PathBuf, sync::{Arc, Mutex}};
 //use tokio::sync::Mutex;

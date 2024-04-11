@@ -20,3 +20,6 @@ pub const TIMER_DURATION: u64 = 3600; // 1h
 // main.rs + model_manage.rs
 pub const MODEL_STORED_PATH: &str = "./model/";
 pub const MODEL_BACKUP_STORED_PATH: &str = "./.modbak/";
+
+// dl_svc.rs
+pub const DL_SVC_HOST: &str = "https://localhost:8000";
