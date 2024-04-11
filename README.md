@@ -6,21 +6,31 @@
 <code>Insect-Identifier
 ├── Cargo.lock
 ├── Cargo.toml
-├── deep_learning_service
-│   ├── deep_learning_service
-│   │   ├── asgi.py
-│   │   ├── __init__.py
-│   │   ├── settings.py
-│   │   ├── urls.py
-│   │   └── wsgi.py
-│   ├── dl_svc
-│   │   ├── apis.py
-│   │   ├── datasetloader.py
-│   │   ├── __init__.py
-│   │   ├── network.py
-│   │   ├── urls.py
-│   │   └── utils.py
-│   └── manage.py
+├── dl_svc
+│   ├── COCA
+│   │   ├── coca_model.py
+│   │   ├── multimodal_decoder.py
+│   │   └── text_decoder.py
+│   ├── datasetloader.py
+│   ├── Encoder
+│   │   └── vision_transformer.py
+│   ├── Layers
+│   │   ├── attention_pooler.py
+│   │   ├── mlp.py
+│   │   ├── multi_head_attention.py
+│   │   ├── normalizations.py
+│   │   ├── patch_embedding.py
+│   │   └── transformer.py
+│   ├── Loss
+│   │   └── contrastive_loss_with_temperature.py
+│   ├── Masking
+│   │   └── random_masking.py
+│   ├── Utils
+│   │   ├── attention.py
+│   │   ├── common.py
+│   │   ├── distributed.py
+│   │   └── file_io.py
+│   └── utils.py
 ├── frontend_nextjs
 │   ├── next.config.mjs
 │   ├── next-env.d.ts
@@ -42,12 +52,14 @@
 │   ├── tailwind.config.ts
 │   └── tsconfig.json
 ├── README.md
+├── requirements.txt
 └── src
     ├── authenticator.rs
     ├── bin
     │   └── init.rs
     ├── config.rs
     ├── daemon.rs
+    ├── dl_svc.rs
     ├── doc_database.rs
     ├── feedback.rs
     ├── io_cache.rs
@@ -55,7 +67,7 @@
     ├── model_manager.rs
     └── user_manager.rs
 
-12 directories, 39 files</code>
+16 directories, 47 files</code>
 </pre>
 </details>
 
