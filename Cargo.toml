@@ -3,11 +3,13 @@ name = "insects-identifier"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
+[[bin]] # Initialization of the project
 name = "init"
+path = "src/init_proj/init.rs"
 
-[[Network]]
-name = "Insect Detect System Network"
+# [[bin]] # SSH Connection based on WebSocket
+# name = "ssh_socket"
+# path = "src/ssh_socket/server.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -42,8 +44,8 @@ ring = "0.17.8"
 # axum-extra = { version = "0.9.2", features = ["typed-header"] }
 chrono = "0.4.35"
 
-hyper = { version = "1.2.0", features = ["client", "http2"] }
-hyper-proxy = "0.9.1"
+# hyper = { version = "1.2.0", features = ["client", "http2"] }
+# hyper-proxy = "0.9.1"
 
 # burn = "0.12.1"
 # plotters = "0.3.5"
