@@ -8,6 +8,7 @@ from dl_svc.procedures import *
 
 if __name__ == '__main__':
     DEFAULT_CONFIG_PATH = './dl_svc/default/cfg.ini'
+    CHECKPOINT_PATH = './checkpoint/'
     TENSORBOARD_DATA_PATH = './.log'
 
     parser = ArgumentParser()
@@ -25,6 +26,7 @@ if __name__ == '__main__':
         default='./models', type=str)
     parser.add_argument('--custom_net', action='store_true', default=False, 
         help='Enable to adjust the struct of network. Will load Config File named "cfg.ini".')
+    parser.add_argument('--carry_on', action='store_true', default=False)
     
     # mode valid (Optional for mode train)
     parser.add_argument('--validate_dataset', '-v', dest='vset', type=str)
@@ -54,7 +56,7 @@ if __name__ == '__main__':
 
     match args.mode:
         case 'train':
-            train(args, config['Train'], writer, custom_net=args.custom_net)
+            train(args, config['Train'], custom_net=args.custom_net, carry_on=args.carry_on)
         case 'valid':
             pass
         case 'compile_model':
@@ -69,6 +71,8 @@ def init_dirs():
 
     if not os.path.exists(args.mod_path):
         os.mkdir(args.mod_path)
+    if not os.path.exists(CHECKPOINT_PATH):
+        os.mkdir(CHECKPOINT_PATH)
     if not os.path.exists(TENSORBOARD_DATA_PATH):
         os.mkdir(TENSORBOARD_DATA_PATH)
         ret = SetFileAttributesW(

@@ -49,8 +49,9 @@ class EarlyStopping:
                 f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save({
                 'name': params['name'],
-                'model_state_dict': params['model'],
-                'optimizer_state_dict': params['optimizer'],
+                'model': params['model'],
+                'opt': params['optimizer'],
+                'scheduler': params['scheduler']
             },
             os.path.join(path, 'checkpoint.pth')
         )

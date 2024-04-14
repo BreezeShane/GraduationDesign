@@ -28,13 +28,6 @@ def train(args, config, custom_net=False, carry_on=False):
         # model_name = 'coca_vit_b_32'
     optimizer = torch.optim.Adam(
         model.parameters(),lr=config.getfloat('learning_rate'))
-    if carry_on:
-        checkpoint = torch.load(join(args.mod_path, 'checkpoint.pth'))
-        model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        model.eval()
-
-
     if config.getboolean('enable_warm_up'):
         lr_scheduler = CosineAnnealingWarmRestarts(
             optimizer=optimizer,
@@ -48,6 +41,18 @@ def train(args, config, custom_net=False, carry_on=False):
             T_max=len(t_dataloader),
             # eta_min=1e-6
         )
+    
+    if carry_on:
+        checkpoint = torch.load(join(
+            args.mod_path if config.getboolean('enable_early_stop') else CHECKPOINT_PATH, 
+            'checkpoint.pth'
+            )
+        )
+        model.load_state_dict(checkpoint['model'])
+        optimizer.load_state_dict(checkpoint['opt'])
+        lr_scheduler.load_state_dict(checkpoint['schedule'])
+        model.eval()
+    
     loss_criterion = ContrastiveLossWithTemperature(
         logit_scale = math.log(1 / 0.07), # DEFAULT_LOGIT_SCALE
         logit_scale_min = math.log(1.0),
@@ -104,6 +109,18 @@ def train(args, config, custom_net=False, carry_on=False):
                         f'{idx}-{len(t_dataloader)}-model.pt'
                     )
                 )
+                if not config.getboolean('enable_early_stop'):
+                    torch.save({
+                            'name': model_name,
+                            'model': model.state_dict(),
+                            'opt': optimizer.state_dict(),
+                            'scheduler': lr_scheduler.state_dict()
+                        },
+                        join(
+                            CHECKPOINT_PATH,
+                            'common_checkpoint.pth'
+                        )
+                    )
             
             #TB Print train loss and histogram of parameters' distribution
             writer.add_scalar(f"T_loss_epoch_{epoch+1}", loss.item(), idx)
