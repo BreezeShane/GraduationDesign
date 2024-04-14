@@ -107,7 +107,7 @@ def train(args, config, custom_net=False, carry_on=False):
             
             #TB Print train loss and histogram of parameters' distribution
             writer.add_scalar(f"T_loss_epoch_{epoch+1}", loss.item(), idx)
-            writer.add_scalar(f"learning_rate_epoch_{epoch+1}", lr_scheduler.get_last_lr(), idx)
+            writer.add_scalar(f"learning_rate_epoch_{epoch + 1}", lr_scheduler.get_last_lr(), idx)
             for name, param in model.named_parameters():
                 writer.add_histogram(tag=name+'_grad', values=param.grad, global_step=idx)
                 writer.add_histogram(tag=name+'_data', values=param.data, global_step=idx)
