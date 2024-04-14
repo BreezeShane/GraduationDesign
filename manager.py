@@ -13,10 +13,10 @@ if __name__ == '__main__':
     parser = ArgumentParser()
 
     parser.add_argument('mode', type=str, 
-        choices=['train', 'validate', 'compile_model', 'inference', 'show_graphs'])
+        choices=['train', 'valid', 'compile_model', 'infer', 'show_graphs'])
     
+    # mode train
     parser.add_argument('train_dataset', dest='tset', type=str)
-    parser.add_argument('--validate_dataset', '-v', dest='vset', type=str)
     parser.add_argument('--device', '-d')
     parser.add_argument('--load_config', '-l', action='append', 
         dest='f_cfg', help='Load other config file.', 
@@ -26,6 +26,21 @@ if __name__ == '__main__':
     parser.add_argument('--custom_net', action='store_true', default=False, 
         help='Enable to adjust the struct of network. Will load Config File named "cfg.ini".')
     
+    # mode valid (Optional for mode train)
+    parser.add_argument('--validate_dataset', '-v', dest='vset', type=str)
+
+    # mode infer (Also for mode valid)
+    parser.add_argument('--load_model_path', dest='mod_loc',
+        default='./models', type=str)
+    parser.add_argument('--load_on_gpu', type=int, dest='gpu_id',
+        help='The GPU ID loading model. Use single GPU.')
+    
+    # mode infer
+    parser.add_argument('--dataset', dest='iset', type=str)
+    
+    # mode compile_model
+    # mode show_graphs
+
     config = ConfigParser()
     args = parser.parse_args()
 
@@ -40,11 +55,11 @@ if __name__ == '__main__':
     match args.mode:
         case 'train':
             train(args, config['Train'], writer, custom_net=args.custom_net)
-        case 'validate':
+        case 'valid':
             pass
         case 'compile_model':
             pass
-        case 'inference':
+        case 'infer':
             pass
         case 'show_graphs':
             pass
@@ -59,15 +74,26 @@ def init_dirs():
         ret = SetFileAttributesW(
             TENSORBOARD_DATA_PATH, FILE_ATTRIBUTE_HIDDEN)
 
-def check_devices():
+def check_device():
     if args.device is not None and torch.cuda.is_available():
-        device_list = args.device.split(',')
-        for i in device_list:
-            if i < '0' or i > '9':
-                raise TypeError(f"Expected integer index representing GPU ID, but got '{i}'. \nTips: Expected device parameter example: '-d 0', '-d 0,1,2', etc.")
-        args.device = [
-            torch.device(f"cuda:{cuda_index}") 
-            for cuda_index in device_list
-        ]
+        gpu_id = args.device
+        if gpu_id < '0' or gpu_id > '9':
+            raise TypeError(f"Expected integer index representing GPU ID, but got '{i}'. \nTips: Expected device parameter example: '-d 0'.")
+        args.device = [torch.device(f"cuda:{gpu_id}") ]
     else:
         args.device = [torch.device("cpu")]
+
+### Not applied caused by the lack of GPUs.
+### The function will be used on Multi-GPU Training implementation.
+# def check_multi_devices():
+#     if args.device is not None and torch.cuda.is_available():
+#         device_list = args.device.split(',')
+#         for i in device_list:
+#             if i < '0' or i > '9':
+#                 raise TypeError(f"Expected integer index representing GPU ID, but got '{i}'. \nTips: Expected device parameter example: '-d 0', '-d 0,1,2', etc.")
+#         args.device = [
+#             torch.device(f"cuda:{cuda_index}") 
+#             for cuda_index in device_list
+#         ]
+#     else:
+#         args.device = [torch.device("cpu")]

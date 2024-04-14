@@ -18,10 +18,14 @@ def train(args, config, custom_net=False, carry_on=False):
     
     if custom_net:
         model = coca_vit()
+
+        model_name = 'custom_coca_vit'
         pass
     else:
         model = coca_vit_l_14()
+        model_name = 'coca_vit_l_14'
         # model = coca_vit_b_32()
+        # model_name = 'coca_vit_b_32'
     optimizer = torch.optim.Adam(
         model.parameters(),lr=config.getfloat('learning_rate'))
     if carry_on:
@@ -91,8 +95,10 @@ def train(args, config, custom_net=False, carry_on=False):
             if idx % (len(t_dataloader) // 1000) == 0:
                 print("epoch={}/{}, {}/{} of train, loss={}".format(
                     epoch+1, config.getint('epochs'), idx, len(t_dataloader), loss.item()))
-                torch.save(
-                    model.state_dict(),
+                torch.save({
+                        'name': model_name,
+                        'model': model.state_dict()
+                    },
                     join(
                         args.mod_path,
                         f'{idx}-{len(t_dataloader)}-model.pt'
@@ -101,6 +107,7 @@ def train(args, config, custom_net=False, carry_on=False):
             
             #TB Print train loss and histogram of parameters' distribution
             writer.add_scalar(f"T_loss_epoch_{epoch+1}", loss.item(), idx)
+            writer.add_scalar(f"learning_rate_epoch_{epoch+1}", lr_scheduler.get_last_lr(), idx)
             for name, param in model.named_parameters():
                 writer.add_histogram(tag=name+'_grad', values=param.grad, global_step=idx)
                 writer.add_histogram(tag=name+'_data', values=param.data, global_step=idx)
@@ -144,6 +151,7 @@ def train(args, config, custom_net=False, carry_on=False):
             early_stopping(
                 valid_epochs_loss[-1],
                 params={
+                    'name': model_name,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                 },
