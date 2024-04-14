@@ -9,26 +9,28 @@ from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14, coca_vit
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
 from dl_svc.Utils.early_stop import EarlyStopping
 
-def train(args, config, custom_net=False):
+def train(args, config, custom_net=False, carry_on=False):
     t_dataloader = load_dataset(args.tset, 
         batch_size=config.getint('batch_size'))
     v_dataloader = None
     if args.vset is not None:
         v_dataloader = load_dataset(args.vset)
-
+    
     if custom_net:
         model = coca_vit()
         pass
     else:
         model = coca_vit_l_14()
         # model = coca_vit_b_32()
-    loss_criterion = ContrastiveLossWithTemperature(
-        logit_scale = math.log(1 / 0.07), # DEFAULT_LOGIT_SCALE
-        logit_scale_min = math.log(1.0),
-        logit_scale_max = math.log(100.0),
-    )
     optimizer = torch.optim.Adam(
         model.parameters(),lr=config.getfloat('learning_rate'))
+    if carry_on:
+        checkpoint = torch.load(join(args.mod_path, 'checkpoint.pth'))
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        model.eval()
+
+
     if config.getboolean('enable_warm_up'):
         lr_scheduler = CosineAnnealingWarmRestarts(
             optimizer=optimizer,
@@ -42,12 +44,17 @@ def train(args, config, custom_net=False):
             T_max=len(t_dataloader),
             # eta_min=1e-6
         )
-
-    early_stopping = EarlyStopping(
-        config.getint('patience'), 
-        verbose=True,
-        delta=0
+    loss_criterion = ContrastiveLossWithTemperature(
+        logit_scale = math.log(1 / 0.07), # DEFAULT_LOGIT_SCALE
+        logit_scale_min = math.log(1.0),
+        logit_scale_max = math.log(100.0),
     )
+    if config.getboolean('enable_early_stop'):
+        early_stopping = EarlyStopping(
+            config.getint('patience'), 
+            verbose=True,
+            delta=0
+        )
     writer = SummaryWriter(TENSORBOARD_DATA_PATH)
     #TB Print Model
     rand_input = torch.rand(1, 3, 224, 224)
@@ -65,7 +72,7 @@ def train(args, config, custom_net=False):
         train_epoch_loss = []
         acc, nums = 0., 0
 
-        for idx, (inputs, label) in enumerate(tqdm(train_dataloader)):
+        for idx, (inputs, label) in enumerate(tqdm(t_dataloader)):
             inputs = inputs.to(torch.float32).to(args.device)
             label = label.to(torch.float32).to(args.device)
             outputs = model(inputs)
@@ -81,9 +88,17 @@ def train(args, config, custom_net=False):
             acc += sum(outputs.max(axis=1)[1] == label).cpu()
             nums += label.size()[0]
             
-            if idx % (len(train_dataloader) // 2) == 0:
-                print("epoch={}/{}, {}/{}of train, loss={}".format(
-                    epoch+1, config.getint('epochs'), idx, len(train_dataloader), loss.item()))
+            if idx % (len(t_dataloader) // 1000) == 0:
+                print("epoch={}/{}, {}/{} of train, loss={}".format(
+                    epoch+1, config.getint('epochs'), idx, len(t_dataloader), loss.item()))
+                torch.save(
+                    model.state_dict(),
+                    join(
+                        args.mod_path,
+                        f'{idx}-{len(t_dataloader)}-model.pt'
+                    )
+                )
+            
             #TB Print train loss and histogram of parameters' distribution
             writer.add_scalar(f"T_loss_epoch_{epoch+1}", loss.item(), idx)
             for name, param in model.named_parameters():
@@ -128,7 +143,10 @@ def train(args, config, custom_net=False):
         if config.getboolean('enable_early_stop'):
             early_stopping(
                 valid_epochs_loss[-1],
-                model=model,
+                params={
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                },
                 path=args.mod_path
             )
             if early_stopping.early_stop:
