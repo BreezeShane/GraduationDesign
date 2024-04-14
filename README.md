@@ -29,10 +29,9 @@
 │   │   └── random_masking.py
 │   ├── procedures
 │   │   ├── compile_model.py
-│   │   ├── inference.py
+│   │   ├── infer_et_valid.py
 │   │   ├── prune_model.py
-│   │   ├── train.py
-│   │   └── validate.py
+│   │   └── train.py
 │   └── Utils
 │       ├── attention.py
 │       ├── common.py
@@ -78,8 +77,8 @@
     │   ├── client.rs
     │   └── server.rs
     └── user_manager.rs
-
-19 directories, 56 files</code>
+<br>
+19 directories, 55 files</code>
 </pre>
 </details>
 
