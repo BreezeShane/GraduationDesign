@@ -12,6 +12,8 @@
 │   │   ├── multimodal_decoder.py
 │   │   └── text_decoder.py
 │   ├── datasetloader.py
+│   ├── default
+│   │   └── cfg.ini
 │   ├── Encoder
 │   │   └── vision_transformer.py
 │   ├── Layers
@@ -25,12 +27,18 @@
 │   │   └── contrastive_loss_with_temperature.py
 │   ├── Masking
 │   │   └── random_masking.py
-│   ├── Utils
-│   │   ├── attention.py
-│   │   ├── common.py
-│   │   ├── distributed.py
-│   │   └── file_io.py
-│   └── utils.py
+│   ├── procedures
+│   │   ├── compile_model.py
+│   │   ├── inference.py
+│   │   ├── prune_model.py
+│   │   ├── train.py
+│   │   └── validate.py
+│   └── Utils
+│       ├── attention.py
+│       ├── common.py
+│       ├── distributed.py
+│       ├── early_stop.py
+│       └── file_io.py
 ├── frontend_nextjs
 │   ├── next.config.mjs
 │   ├── next-env.d.ts
@@ -51,23 +59,27 @@
 │   │   └── pages
 │   ├── tailwind.config.ts
 │   └── tsconfig.json
+├── manager.py
 ├── README.md
 ├── requirements.txt
 └── src
     ├── authenticator.rs
-    ├── bin
-    │   └── init.rs
     ├── config.rs
     ├── daemon.rs
     ├── dl_svc.rs
     ├── doc_database.rs
     ├── feedback.rs
+    ├── init_proj
+    │   └── init.rs
     ├── io_cache.rs
     ├── main.rs
     ├── model_manager.rs
+    ├── ssh_socket
+    │   ├── client.rs
+    │   └── server.rs
     └── user_manager.rs
 
-16 directories, 47 files</code>
+19 directories, 56 files</code>
 </pre>
 </details>
 
@@ -91,8 +103,20 @@ cargo run --bin init # Initialize database.
 
 ## Deep Learning
 
+### Using Datasets
+
+`On dev ......`
+
 ### Models' Source [[Reference]](https://github.com/facebookresearch/multimodal)
 
 The deep learning model named COCA, which comes from [TorchMultimodal](https://github.com/facebookresearch/multimodal), is the large model in this project here using for insect image classification. Thanks for their excellent works!
 
 However I extract COCA only and edited source code in order to fit the project in plan of applying `deepspeed`, `Lora Adaptation`, `TVM`, etc.
+
+### Early Stop Source [[Reference]](https://github.com/Bjarten/early-stopping-pytorch)
+
+The project use Early Stop Regularization method to train COCA, because of the lack of data. The Early Stop class comes from `pytorchtools.py` of [here](https://github.com/Bjarten/early-stopping-pytorch).
+
+### Initial params' value [[Reference]](https://arxiv.org/abs/2001.08361)
+
+The deeplearning procedures of project use the initial params' value, which come from the [research](https://arxiv.org/abs/2001.08361). Great appreciation for [Jared Kaplan](https://sites.krieger.jhu.edu/jared-kaplan/)'s research!
