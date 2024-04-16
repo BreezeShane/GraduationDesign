@@ -27,6 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--custom_net', action='store_true', default=False, 
         help='Enable to adjust the struct of network. Will load Config File named "cfg.ini".')
     parser.add_argument('--carry_on', action='store_true', default=False)
+    parser.add_argument('--use_deepspeed', action='store_ture', default=False)
     
     # mode valid (Optional for mode train)
     parser.add_argument('--validate_dataset', '-v', dest='vset', type=str)

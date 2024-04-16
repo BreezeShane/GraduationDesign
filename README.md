@@ -100,6 +100,18 @@ createdb InsectSys
 cargo run --bin init # Initialize database.
 ```
 
+### CUDA == v11.7 (Not ensure to support newer version)
+
+In general, the deep learning would support higher version, as long as DeepSpeed supports PyTorch and PyTorch supports the relative CUDA.
+
+To install PyTorch v1.13.1+cu117, use the command **(Of course torchaudio is optional)**:
+```shell
+pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
+```
+
+The command comes from `pytorch.org`, for more details, see: [INSTALLING PREVIOUS VERSIONS OF PYTORCH - pytorch.org](https://pytorch.org/get-started/previous-versions/)
+
+
 ## Deep Learning
 
 ### Using Datasets

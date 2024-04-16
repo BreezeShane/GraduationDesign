@@ -10,11 +10,13 @@ from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTem
 from dl_svc.Utils.early_stop import EarlyStopping
 
 def train(args, config, custom_net=False, carry_on=False):
+    # TODO
+    t_dataset = None
+
     t_dataloader = load_dataset(args.tset, 
         batch_size=config.getint('batch_size'))
-    v_dataloader = None
-    if args.vset is not None:
-        v_dataloader = load_dataset(args.vset)
+
+    v_dataloader = None if args.vset is None else load_dataset(args.vset)
     
     if custom_net:
         model = coca_vit()
@@ -26,21 +28,28 @@ def train(args, config, custom_net=False, carry_on=False):
         model_name = 'coca_vit_l_14'
         # model = coca_vit_b_32()
         # model_name = 'coca_vit_b_32'
-    optimizer = torch.optim.Adam(
-        model.parameters(),lr=config.getfloat('learning_rate'))
-    if config.getboolean('enable_warm_up'):
-        lr_scheduler = CosineAnnealingWarmRestarts(
-            optimizer=optimizer,
-            T_0=len(t_dataloader),
-            T_mult=1,
-            # eta_min=1e-6
-        )
+    
+    if args.use_deepspeed:
+        parameters = filter(lambda p: p.requires_grad, model.parameters())
+        model, optimizer, t_dataloader, lr_scheduler = deepspeed.initialize(
+            model=model, model_parameters=parameters, training_data=t_dataset)
+        lr_scheduler.total_num_steps = len(t_dataloader)
     else:
-        lr_scheduler = CosineAnnealingLR(
-            optimizer,
-            T_max=len(t_dataloader),
-            # eta_min=1e-6
-        )
+        optimizer = torch.optim.Adam(
+            model.parameters(),lr=config.getfloat('learning_rate'))
+        if config.getboolean('enable_warm_up'):
+            lr_scheduler = CosineAnnealingWarmRestarts(
+                optimizer=optimizer,
+                T_0=len(t_dataloader),
+                T_mult=1,
+                # eta_min=1e-6
+            )
+        else:
+            lr_scheduler = CosineAnnealingLR(
+                optimizer,
+                T_max=len(t_dataloader),
+                # eta_min=1e-6
+            )
     
     if carry_on:
         checkpoint = torch.load(join(
@@ -81,21 +90,27 @@ def train(args, config, custom_net=False, carry_on=False):
         train_epoch_loss = []
         acc, nums = 0., 0
 
-        for idx, (inputs, label) in enumerate(tqdm(t_dataloader)):
-            inputs = inputs.to(torch.float32).to(args.device)
-            label = label.to(torch.float32).to(args.device)
+        for idx, (labels, inputss) in enumerate(tqdm(t_dataloader)):
+            inputs = inputs.to(torch.float32).to(model.local_rank if args.use_deepspeed else args.device)
+            labels = labels.to(torch.float32).to(model.local_rank if args.use_deepspeed else args.device)
             outputs = model(inputs)
-            optimizer.zero_grad()
-            loss = loss_criterion(outputs, label)
-            loss.backward()
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0) # grad clip
-            optimizer.step()
-            # Cosine Annealing Learning Rate
+            loss = loss_criterion(outputs, labels)
+
+            if args.use_deepspeed:
+                model.backward(loss)
+                model.step()
+                lr_scheduler.step()
+            else:
+                optimizer.zero_grad()
+                model.backward()
+                # torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0) # grad clip
+                optimizer.step()
+            # Cosine Annealing Learning Rate While not using DeepSpeed
             lr_scheduler.step()
 
             train_epoch_loss.append(loss.item())
-            acc += sum(outputs.max(axis=1)[1] == label).cpu()
-            nums += label.size()[0]
+            acc += sum(outputs.max(axis=1)[1] == labels).cpu()
+            nums += labels.size()[0]
             
             if idx % (len(t_dataloader) // 1000) == 0:
                 print("epoch={}/{}, {}/{} of train, loss={}".format(
@@ -137,32 +152,33 @@ def train(args, config, custom_net=False, carry_on=False):
             "train acc = {:.3f}%, loss = {}"
             .format(Acc_t, E_t_loss))
         #=====================valid============================
-        with torch.no_grad():
-            model.eval()
-            valid_epoch_loss = []
-            acc, nums = 0., 0
-            
-            for idx,(label, inputs) in enumerate(tqdm(valid_dataloader)):
-                inputs = inputs.to(torch.float32).to(args.device)
-                label = label.to(torch.float32).to(args.device)
-                outputs = model(inputs)
-                loss = loss_criterion(outputs, label)
+        if v_dataloader is not None:
+            with torch.no_grad():
+                model.eval()
+                valid_epoch_loss = []
+                acc, nums = 0., 0
+                
+                for idx, (labels, inputs) in enumerate(tqdm(v_dataloader)):
+                    inputs = inputs.to(torch.float32).to(args.device)
+                    labels = labels.to(torch.float32).to(args.device)
+                    outputs = model(inputs)
+                    loss = loss_criterion(outputs, labels)
 
-                valid_epoch_loss.append(loss.item())
-                acc += sum(outputs.max(axis=1)[1] == label).cpu()
-                nums += label.size()[0]
-                #TB Print valid loss
-                writer.add_scalar(f"V_loss_epoch_{epoch+1}", loss.item(), idx)
+                    valid_epoch_loss.append(loss.item())
+                    acc += sum(outputs.max(axis=1)[1] == labels).cpu()
+                    nums += labels.size()[0]
+                    #TB Print valid loss
+                    writer.add_scalar(f"V_loss_epoch_{epoch+1}", loss.item(), idx)
 
 
-            E_v_loss = np.average(valid_epoch_loss)
-            Acc_v = 100 * acc / nums
-            valid_epochs_loss.append(E_v_loss)
-            val_acc.append(Acc_v)
-            print(
-                "epoch = {}, valid acc = {:.3f}%, loss = {}"
-                .format(epoch+1, Acc_v, E_v_loss)
-            )
+                E_v_loss = np.average(valid_epoch_loss)
+                Acc_v = 100 * acc / nums
+                valid_epochs_loss.append(E_v_loss)
+                val_acc.append(Acc_v)
+                print(
+                    "epoch = {}, valid acc = {:.3f}%, loss = {}"
+                    .format(epoch+1, Acc_v, E_v_loss)
+                )
         #==================early stopping======================
         if config.getboolean('enable_early_stop'):
             early_stopping(
