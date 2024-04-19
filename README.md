@@ -131,6 +131,167 @@ The command comes from `pytorch.org`, for more details, see: [INSTALLING PREVIOU
 5. [Dangerous Farm Insects Dataset - kaggle](https://www.kaggle.com/datasets/tarundalal/dangerous-insects-dataset)
     
     This dataset contains 15 classes that are regarded as the dangerous and harmful insects(Images total in 1578).
+6. [Insect Detect - insect classification dataset v2](https://zenodo.org/records/8325384)
+
+    The dataset contains 27 classes and 21000 images in total.
+    <details>
+    <summary>Count of each class</summary>
+    <style type="text/css">
+    .tg  {border-collapse:collapse;border-spacing:0;}
+    .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+    overflow:hidden;padding:10px 5px;word-break:normal;}
+    .tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+    font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+    .tg .tg-baqh{text-align:center;vertical-align:top}
+    .tg .tg-0lax{text-align:left;vertical-align:top}
+    </style>
+    <table class="tg">
+    <thead>
+    <tr>
+        <th class="tg-baqh">Class</th>
+        <th class="tg-baqh">Description</th>
+        <th class="tg-baqh">Image Count</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td class="tg-baqh">ant</td>
+        <td class="tg-0lax">Formicidae</td>
+        <td class="tg-baqh">1097</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">bee</td>
+        <td class="tg-0lax">Anthophila excluding Apis mellifera and Bombus sp.</td>
+        <td class="tg-baqh">1061</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">bee_apis</td>
+        <td class="tg-0lax">Apis mellifera</td>
+        <td class="tg-baqh">294</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">bee_bombus</td>
+        <td class="tg-0lax">Bombus sp.</td>
+        <td class="tg-baqh">1262</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">beetle</td>
+        <td class="tg-0lax">Coleoptera excluding Coccinellidae and some Oedemeridae</td>
+        <td class="tg-baqh">520</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">beetle_cocci</td>
+        <td class="tg-0lax">Coccinellidae</td>
+        <td class="tg-baqh">776</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">beetle_oedem</td>
+        <td class="tg-0lax">Visually distinct Oedemeridae</td>
+        <td class="tg-baqh">199</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">bug</td>
+        <td class="tg-0lax">Heteroptera excluding Graphosoma italicum</td>
+        <td class="tg-baqh">390</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">bug_grapho</td>
+        <td class="tg-0lax">Graphosoma italicum</td>
+        <td class="tg-baqh">185</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">fly</td>
+        <td class="tg-0lax">Brachycera excluding Empididae, Sarcophagidae, Syrphidae and small Brachycera</td>
+        <td class="tg-baqh">1717</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">fly_empi</td>
+        <td class="tg-0lax">Empididae</td>
+        <td class="tg-baqh">177</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">fly_sarco</td>
+        <td class="tg-0lax">Visually distinct Sarcophagidae</td>
+        <td class="tg-baqh">319</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">fly_small</td>
+        <td class="tg-0lax">Small Brachycera</td>
+        <td class="tg-baqh">1662</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">hfly_episyr</td>
+        <td class="tg-0lax">Hoverfly Episyrphus balteatus</td>
+        <td class="tg-baqh">2518</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">hfly_eristal</td>
+        <td class="tg-0lax">Hoverfly Eristalis sp., mainly Eristalis tenax</td>
+        <td class="tg-baqh">1954</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">hfly_eupeo</td>
+        <td class="tg-0lax">Mainly hoverfly Eupeodes corollae and Scaeva pyrastri</td>
+        <td class="tg-baqh">1358</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">hfly_myathr</td>
+        <td class="tg-0lax">Hoverfly Myathropa florea</td>
+        <td class="tg-baqh">593</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">hfly_sphaero</td>
+        <td class="tg-0lax">Hoverfly Sphaerophoria sp., mainly Sphaerophoria scripta</td>
+        <td class="tg-baqh">374</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">hfly_syrphus</td>
+        <td class="tg-0lax">Mainly hoverfly Syrphus sp.</td>
+        <td class="tg-baqh">488</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">lepi</td>
+        <td class="tg-0lax">Lepidoptera</td>
+        <td class="tg-baqh">228</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">none_bg</td>
+        <td class="tg-0lax">Images with no insect - background (platform)</td>
+        <td class="tg-baqh">851</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">none_bird</td>
+        <td class="tg-0lax">Images with no insect - bird sitting on platform</td>
+        <td class="tg-baqh">67</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">none_dirt</td>
+        <td class="tg-0lax">Images with no insect - leaves and other plant material, bird droppings</td>
+        <td class="tg-baqh">838</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">none_shadow</td>
+        <td class="tg-0lax">Images with no insect - shadows of insects or surrounding plants</td>
+        <td class="tg-baqh">647</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">other</td>
+        <td class="tg-0lax">Other Arthropods, including various Hymenoptera and Symphyta, Diptera, Orthoptera, <br>Auchenorrhyncha, Neuroptera, Araneae</td>
+        <td class="tg-baqh">790</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">scorpionfly</td>
+        <td class="tg-0lax">Panorpa sp.</td>
+        <td class="tg-baqh">120</td>
+    </tr>
+    <tr>
+        <td class="tg-baqh">wasp</td>
+        <td class="tg-0lax">Mainly Vespula sp. and Polistes dominula</td>
+        <td class="tg-baqh">515</td>
+    </tr>
+    </tbody>
+    </table>
+    </details>
 
 ### Models' Source [[Reference]](https://github.com/facebookresearch/multimodal)
 
