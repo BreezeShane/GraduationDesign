@@ -1,10 +1,12 @@
 import os
 import torch
+from tvm.target import Target
 from configparser import ConfigParser
 from argparse import ArgumentParser, FileType
 from ctypes.windll.kernel32 import SetFileAttributesW
 from torch.utils.tensorboard import SummaryWriter
-from dl_svc.procedures import *
+from dl_svc.procedures.train import train
+from dl_svc.procedures.infer_et_valid import validate, inference
 
 if __name__ == '__main__':
     DEFAULT_CONFIG_PATH = './dl_svc/default/cfg.ini'
@@ -47,6 +49,16 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', dest='iset', type=str)
     
     # mode compile_model
+    parser.add_argument('--model_path', dest='mod2cmp', type=str)
+    # see https://tvm.apache.org/docs/reference/api/python/target.html#module-tvm.target for detals.
+    parser.add_argument('--compile_mode', dest='cmp_mode', type=str, choices=Target.list_kinds())
+    parser.add_argument('--save_package_path', dest='pkg_path', type=str)
+    parser.add_argument('--tune_mode', dest='tune', action='store_true', default=False)
+    parser.add_argument('--continue_compile', action='store_true', default=False)
+    parser.add_argument('--enable_autoscheduler', dest='autoscheduler', action='store_true', default=False)
+    parser.add_argument('--set_trails', dest='trails', default=10000, type=int)
+    parser.add_argument('--set_timeout', dest='timeout', default=10, type=int)
+
     # mode show_graphs
 
     config = ConfigParser()
@@ -64,10 +76,10 @@ if __name__ == '__main__':
         case 'train':
             train(args, config['Train'], custom_net=args.custom_net, carry_on=args.carry_on)
         case 'valid':
-            pass
-        case 'compile_model':
-            pass
+            validate(args=args)
         case 'infer':
+            result = inference(args=args)
+        case 'compile_model':
             pass
         case 'show_graphs':
             pass
