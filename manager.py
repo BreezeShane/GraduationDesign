@@ -38,6 +38,11 @@ if __name__ == '__main__':
     parser.add_argument('--load_on_gpu', type=int, dest='gpu_id',
         help='The GPU ID loading model. Use single GPU.')
     
+    # Optional for Train, Valid and Infer
+    parser.add_argument('--use_lora', action='store_ture', default=False)
+    parser.add_argument('--lora_path', type=str, 
+        help="Needed by mode valid and infer, please enable use_lora and give the path to LoRA models.")
+    
     # mode infer
     parser.add_argument('--dataset', dest='iset', type=str)
     

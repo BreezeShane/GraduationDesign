@@ -3,6 +3,7 @@ from tqdm import tqdm
 from os.path import join
 from torchsummary import summary
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
+from peft import get_peft_config, get_peft_model, LoraConfig, TaskType, PeftModel, PeftConfig
 
 from dl_svc.datasetloader import load_dataset
 from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14, coca_vit
@@ -28,6 +29,17 @@ def train(args, config, custom_net=False, carry_on=False):
         model_name = 'coca_vit_l_14'
         # model = coca_vit_b_32()
         # model_name = 'coca_vit_b_32'
+    
+    if args.use_lora:
+        peft_config = LoraConfig(
+            task_type=TaskType.SEQ_2_SEQ_LM, 
+            inference_mode=False, 
+            r=8, 
+            lora_alpha=32, 
+            lora_dropout=0.1
+        )
+        model = get_peft_model(model, peft_config)
+        model.print_trainable_parameters()
     
     if args.use_deepspeed:
         parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -61,7 +73,11 @@ def train(args, config, custom_net=False, carry_on=False):
         optimizer.load_state_dict(checkpoint['opt'])
         lr_scheduler.load_state_dict(checkpoint['schedule'])
         model.eval()
-    
+        if args.use_lora:
+            peft_model_id = f"{model_name}_{peft_config.peft_type}_{peft_config.task_type}"
+            config = PeftConfig.from_pretrained(join(args.mod_path, peft_model_id))
+            model = PeftModel.from_pretrained(model, peft_model_id)
+                
     loss_criterion = ContrastiveLossWithTemperature(
         logit_scale = math.log(1 / 0.07), # DEFAULT_LOGIT_SCALE
         logit_scale_min = math.log(1.0),
@@ -115,6 +131,9 @@ def train(args, config, custom_net=False, carry_on=False):
             if idx % (len(t_dataloader) // 1000) == 0:
                 print("epoch={}/{}, {}/{} of train, loss={}".format(
                     epoch+1, config.getint('epochs'), idx, len(t_dataloader), loss.item()))
+                if args.use_lora:
+                    peft_model_id = f"{model_name}_{peft_config.peft_type}_{peft_config.task_type}"
+                    model.save_pretrained(join(args.mod_path, peft_model_id))
                 torch.save({
                         'name': model_name,
                         'model': model.state_dict()

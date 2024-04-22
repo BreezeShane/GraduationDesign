@@ -116,10 +116,12 @@ The command comes from `pytorch.org`, for more details, see: [INSTALLING PREVIOU
 
 ### Using Datasets
 
-1. [IP102: A Large-Scale Benchmark Dataset for Insect Pest Recognition](https://github.com/xpwu95/IP102?tab=readme-ov-file)
+<!-- > The HTML code of tables comes from here: [Tables Generator](https://www.tablesgenerator.com/html_tables) -->
+
+[IP102: A Large-Scale Benchmark Dataset for Insect Pest Recognition](https://github.com/xpwu95/IP102?tab=readme-ov-file)
 
     The IP102 dataset contains more than 75,000 images belongs to 102 categories. [Source](https://drive.google.com/drive/folders/1svFSy2Da3cVMvekBwe13mzyx38XZ9xWo?usp=sharing) The dataset contains 45,095 images in the training set, 7,508 images in the validation set, and 22,619 images in the testing set for classification task.
-2. [Data Set of 120 Insect Species for Classification projects - kaggle](https://www.kaggle.com/discussions/general/164015)
+<!-- 2. [Data Set of 120 Insect Species for Classification projects - kaggle](https://www.kaggle.com/discussions/general/164015)
     
     It has 291 species of Insects using 63,364 images from the Natural History Museum London. [Source](https://zenodo.org/record/3549369#.XvI_jMfVLIU)
 3. [InsectBase: Soybean Crop Insect Raw Image Dataset_V1 with Bounding boxes for Classification and Localization](https://figshare.com/articles/dataset/Soybean_Crop_Insect_Raw_Image_Dataset_V1_with_bounding_boxes/13077221/4)
@@ -291,7 +293,7 @@ The command comes from `pytorch.org`, for more details, see: [INSTALLING PREVIOU
     </tr>
     </tbody>
     </table>
-    </details>
+    </details> -->
 
 ### Models' Source [[Reference]](https://github.com/facebookresearch/multimodal)
 

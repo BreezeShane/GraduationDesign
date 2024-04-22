@@ -87,4 +87,10 @@ def __load_model(args):
     model.load_state_dict(model_dict['model'])
     model.eval()
 
+    if args.use_lora:
+        if args.lora_path is None:
+            raise ValueError("'lora_path' parameter is needed!")
+        config = PeftConfig.from_pretrained(args.lora_path)
+        model = PeftModel.from_pretrained(model, args.lora_path)
+
     return model
