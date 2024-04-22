@@ -67,7 +67,7 @@ def load_data(data_folder_path):
         for img_file in files:
             file_path = os.path.join(root, img_file)
             file_type = imghdr.what(file_path)
-            if not file_type in imgType_list:
+            if file_type not in imgType_list:
                 raise TypeError(f"Needed image type, but got {file_type}")
             data_list.append(
                 (file_path, Image.open(file_path))
