@@ -1,39 +1,76 @@
 import os
+import imghdr
 from torch.utils.data import IterableDataset
 import torchvision
-import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
+from PIL import Image
+from torchvision import transforms
+from torch.utils.data import DataLoader, Dataset
 
-class ImageDataset(IterableDataset):
-    def __init__(self, filepath):
-        fnames = [filepath + '/' + filename for filename in os.listdir(filepath)]
-        self.i = -1
-        self.compose = [
-            transforms.ToPILImage(),
-            transforms.Resize((64, 64)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
-        ]
-    
+IMG_TYPE_LIST = {'jpg','bmp','png','jpeg','rgb','tif'}
+
+class IP102_Dataset(Dataset):
+    def __init__(self, dataset_path, data_label_file):
+        self.transforms = transforms.Compose([
+            transforms.Resize((512,512)),        # Crop to (512,512) size.
+            transforms.RandomRotation((30,150)), # Rotate 30°-150° randomly.
+            transforms.RandomHorizontalFlip(0.6),# Flip horizontally with 0.6 probability.
+            transforms.RandomVerticalFlip(0.4),  # Flip vertically with 0.4 probability.
+            transforms.ToTensor(),               # Convert into tensor, and normalize into [0-1], 
+                                                 # then convert [W,H,C] to [C,W,H] which PyTorch needs.
+            transforms.Normalize(
+                mean=(0.5, 0.5, 0.5),
+                std=(0.5, 0.5, 0.5))             # Convert [0-1] into [-1, 1].
+        ])
+        
+        if not os.path.isdir(dataset_path):
+            raise ValueError(f"Expected the path to dataset, but got {dataset_path}")
+        data_label_path = os.path.join(data_label_path, data_label_file)
+        images_path = os.path.join(dataset_path, "images")
+        try:
+            raw_image_label_lines = None
+            with open(join(dataset_path, data_label_file)) as f:
+                raw_image_label_lines = f.read().splitlines()
+            label_data_list = []
+            for raw_line in raw_image_label_lines:
+                temp = raw_line.split(' ')
+                label_data_list.append(
+                    (int(temp[1]), join(images_path, temp[0]))
+                )
+            self.label_data = label_data_list
+        except IOError:
+            raise IOError("Cannot load dataset! Please check the correct path and keep the file struct of dataset right.")
+
+    def __getitem__(self, index):
+        data_with_label = self.label_data[index]
+        label = data_with_label[0]
+        data = self.transforms(
+            Image.open(data_with_label[1])
+        )
+        return label, data
+
     def __len__(self):
-        return len(fnames)
-    
-    def __iter__(self):
-        return self
-    
-    def __next__(self):
-        self.i += 1
-        if self.i >= len(self.fnames):
-            raise StopIteration
-        img = torchvision.io.read_image(fnames[self.i])
-        transform = transforms.Compose(self.compose)
-        return transform(img)
+        assert len(self.data) == len(self.label)
+        return len(self.data)
 
 
-def load_dataset(dataset_folder_path, batch_size=None) -> DataLoader:
-    iterable_dataset = ImageDataset(dataset_folder_path)
-    if batch_size is not None:
-        dataloader = DataLoader(dataset=iterable_dataset, batch_size=batch_size)
-    else:
-        dataloader = DataLoader(dataset=iterable_dataset)
+def load_dataset(dataset_folder_path, record_file, batch_size=None) -> DataLoader:
+    ip102_dataset = IP102_Dataset(dataset_folder_path, record_file)
+    dataloader = DataLoader(dataset=ip102_dataset, batch_size=batch_size, shuffle=True)
     return dataloader
+
+
+def load_data(data_folder_path):
+    data_list = []
+    if not os.path.isdir(data_folder_path):
+        raise ValueError(f"Data folder should be path, but got {data_folder_path}.")
+    for root , _, files in os.walk(data_folder_path): # where _ means middle dirs
+        for img_file in files:
+            file_path = os.path.join(root, img_file)
+            file_type = imghdr.what(file_path)
+            if not file_type in imgType_list:
+                raise TypeError(f"Needed image type, but got {file_type}")
+            data_list.append(
+                (file_path, Image.open(file_path))
+            )
+    return data_list
+            

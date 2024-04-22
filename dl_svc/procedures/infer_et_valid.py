@@ -1,13 +1,13 @@
 import torch
 from os.path import exists, isfile, join
 
-from dl_svc.datasetloader import load_dataset
+from dl_svc.datasetloader import load_dataset, load_data
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
 
 def validate(args):
     if args.vset is None:
         raise ValueError("Validate Dataset is needed!")
-    v_dataloader = load_dataset(args.vset)
+    v_dataloader = load_dataset(args.vset, "valid.txt")
 
     model = __load_model(args=args)
     loss_criterion = ContrastiveLossWithTemperature(
@@ -42,7 +42,7 @@ def validate(args):
 def inference(args):
     if args.iset is None:
         raise ValueError("Inference Dataset is needed!")
-    i_dataloader = load_dataset(args.iset, batch_size=1)
+    i_data_list = load_data(args.iset)
     model = __load_model(args=args)
     loss_criterion = ContrastiveLossWithTemperature(
         logit_scale = math.log(1 / 0.07), # DEFAULT_LOGIT_SCALE
@@ -52,14 +52,17 @@ def inference(args):
 
     result = []
     with torch.no_grad():
-        for idx, (_, img_input) in enumerate(tqdm(i_dataloader)):
+        for idx, (img_name, img_input) in enumerate(tqdm(i_data_list)): # where _ means image file name
             img_input = img_input.to(torch.float32).to(args.device)
             output = model(img_input)
 
             label=torch.argmax(output, 1)
-            result.append(label)
+            result.append(
+                (img_name, label)
+            )
     
     print(result)
+    return result
 
 
 def __load_model(args):
