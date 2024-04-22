@@ -53,9 +53,9 @@ class IP102_Dataset(Dataset):
         return len(self.data)
 
 
-def load_dataset(dataset_folder_path, record_file, batch_size=None) -> DataLoader:
+def load_dataset(dataset_folder_path, record_file, shuffle=True, batch_size=None) -> DataLoader:
     ip102_dataset = IP102_Dataset(dataset_folder_path, record_file)
-    dataloader = DataLoader(dataset=ip102_dataset, batch_size=batch_size, shuffle=True)
+    dataloader = DataLoader(dataset=ip102_dataset, batch_size=batch_size, shuffle=shuffle)
     return dataloader
 
 
