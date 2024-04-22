@@ -11,9 +11,6 @@ from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTem
 from dl_svc.Utils.early_stop import EarlyStopping
 
 def train(args, config, custom_net=False, carry_on=False):
-    # TODO
-    t_dataset = None
-
     t_dataloader = load_dataset(args.tset, 
         batch_size=config.getint('batch_size'))
 
