@@ -13,13 +13,13 @@ import torch.nn.functional as F
 from torch import nn, Tensor
 from .multimodal_decoder import CoCaMultimodalDecoder
 from .text_decoder import CoCaTextDecoder
-from Encoder.vision_transformer import vision_transformer
-from Layers.attention_pooler import (
+from dl_svc.Encoder.vision_transformer import vision_transformer
+from dl_svc.Layers.attention_pooler import (
     AttentionPooler,
     CascadedAttentionPooler,
 )
-from Layers.transformer import TransformerOutput
-from Loss.contrastive_loss_with_temperature import (
+from dl_svc.Layers.transformer import TransformerOutput
+from dl_svc.Loss.contrastive_loss_with_temperature import (
     ContrastiveLossWithTemperature,
 )
 
