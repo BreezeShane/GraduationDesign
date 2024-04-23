@@ -1,9 +1,11 @@
 iopath==0.1.10
 numpy==1.26.4
+peft==0.10.0
+Pillow==10.3.0
 torch==1.13.1+cu117
 torchsummary==1.5.1
 torchvision==0.14.1+cu117
 tqdm==4.66.2
 deepspeed==0.14.0
-peft==0.10.0
 apache-tvm==0.11.1
+yacs==0.1.8

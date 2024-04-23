@@ -3,6 +3,8 @@ from os.path import exists, isfile, join
 
 from dl_svc.datasetloader import load_dataset, load_data
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
+from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14
+from dl_svc.COCA.coca_vit_custom import coca_vit_custom
 
 def validate(args):
     if args.vset is None:
@@ -82,18 +84,16 @@ def __load_model(args):
                 model = coca_vit_l_14()
             case 'coca_vit_b_32':
                 model = coca_vit_b_32()
-            case 'custom_coca_vit':
-                pass
+            case 'coca_vit_custom':
+                model = coca_vit_custom()
     except KeyError:
         raise KeyError(f"Not compatible model! Get model here: {model_path}")
 
     model.load_state_dict(model_dict['model'])
-    model.eval()
-
     if args.use_lora:
         if args.lora_path is None:
             raise ValueError("'lora_path' parameter is needed!")
-        config = PeftConfig.from_pretrained(args.lora_path)
-        model = PeftModel.from_pretrained(model, args.lora_path)
+        model.load_state_dict(torch.load(args.lora_path), strict=False)
+    model.eval()
 
     return model

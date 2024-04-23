@@ -3,29 +3,31 @@ from tqdm import tqdm
 from os.path import join
 from torchsummary import summary
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
-from peft import get_peft_config, get_peft_model, LoraConfig, TaskType, PeftModel, PeftConfig
+from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
 
 from dl_svc.datasetloader import load_dataset
-from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14, coca_vit
+from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14
+from dl_svc.COCA.coca_vit_custom import coca_vit_custom
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
 from dl_svc.Utils.early_stop import EarlyStopping
+from dl_svc.train_config import TRAIN_CFG
 
-def train(args, config, custom_net=False, carry_on=False):
+def train(args, carry_on=False):
     t_dataloader = load_dataset(args.tset, 
-        batch_size=config.getint('batch_size'))
+        batch_size=TRAIN_CFG.BATCH_SIZE)
 
-    v_dataloader = None if args.vset is None else load_dataset(args.vset)
+    v_dataloader = load_dataset(args.vset, "val.txt", shuffle=False) if args.vset is not None else None
     
-    if custom_net:
-        model = coca_vit()
-
-        model_name = 'custom_coca_vit'
-        pass
-    else:
-        model = coca_vit_l_14()
-        model_name = 'coca_vit_l_14'
-        # model = coca_vit_b_32()
-        # model_name = 'coca_vit_b_32'
+    match args.model_type:
+        case 'large':
+            model = coca_vit_l_14()
+            model_name = 'coca_vit_l_14'
+        case 'base':
+            model = coca_vit_b_32()
+            model_name = 'coca_vit_b_32'
+        case 'custom':
+            model = coca_vit_custom()
+            model_name = 'coca_vit_custom'
     
     if args.use_lora:
         peft_config = LoraConfig(
@@ -36,6 +38,7 @@ def train(args, config, custom_net=False, carry_on=False):
             lora_dropout=0.1
         )
         model = get_peft_model(model, peft_config)
+        peft_model_id = f"{model_name}_{peft_config.peft_type}_{peft_config.task_type}"
         model.print_trainable_parameters()
     
     if args.use_deepspeed:
@@ -45,8 +48,8 @@ def train(args, config, custom_net=False, carry_on=False):
         lr_scheduler.total_num_steps = len(t_dataloader)
     else:
         optimizer = torch.optim.Adam(
-            model.parameters(),lr=config.getfloat('learning_rate'))
-        if config.getboolean('enable_warm_up'):
+            model.parameters(),lr=TRAIN_CFG.LR)
+        if TRAIN_CFG.WARM_UP:
             lr_scheduler = CosineAnnealingWarmRestarts(
                 optimizer=optimizer,
                 T_0=len(t_dataloader),
@@ -62,27 +65,27 @@ def train(args, config, custom_net=False, carry_on=False):
     
     if carry_on:
         checkpoint = torch.load(join(
-            args.mod_path if config.getboolean('enable_early_stop') else CHECKPOINT_PATH, 
+            args.mod_path if TRAIN_CFG.EARLY_STOP else CHECKPOINT_PATH, 
             'checkpoint.pth'
             )
         )
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['opt'])
         lr_scheduler.load_state_dict(checkpoint['schedule'])
-        model.eval()
         if args.use_lora:
-            peft_model_id = f"{model_name}_{peft_config.peft_type}_{peft_config.task_type}"
-            config = PeftConfig.from_pretrained(join(args.mod_path, peft_model_id))
-            model = PeftModel.from_pretrained(model, peft_model_id)
-                
+            # config = PeftConfig.from_pretrained(join(args.mod_path, peft_model_id))
+            # model = PeftModel.from_pretrained(model, peft_model_id)
+            model.load_state_dict(torch.load(join(args.mod_path, peft_model_id)), strict=False)
+        model.eval()
+
     loss_criterion = ContrastiveLossWithTemperature(
         logit_scale = math.log(1 / 0.07), # DEFAULT_LOGIT_SCALE
         logit_scale_min = math.log(1.0),
         logit_scale_max = math.log(100.0),
     )
-    if config.getboolean('enable_early_stop'):
+    if TRAIN_CFG.EARLY_STOP:
         early_stopping = EarlyStopping(
-            config.getint('patience'), 
+            TRAIN_CFG.PATIENCE, 
             verbose=True,
             delta=0
         )
@@ -98,7 +101,7 @@ def train(args, config, custom_net=False, carry_on=False):
     train_acc = []
     val_acc = []
 
-    for epoch in range(config.getint('epochs')):
+    for epoch in range(TRAIN_CFG.EPOCHS):
         model.train()
         train_epoch_loss = []
         acc, nums = 0., 0
@@ -127,9 +130,8 @@ def train(args, config, custom_net=False, carry_on=False):
             
             if idx % (len(t_dataloader) // 1000) == 0:
                 print("epoch={}/{}, {}/{} of train, loss={}".format(
-                    epoch+1, config.getint('epochs'), idx, len(t_dataloader), loss.item()))
+                    epoch+1, TRAIN_CFG.EPOCHS, idx, len(t_dataloader), loss.item()))
                 if args.use_lora:
-                    peft_model_id = f"{model_name}_{peft_config.peft_type}_{peft_config.task_type}"
                     model.save_pretrained(join(args.mod_path, peft_model_id))
                 torch.save({
                         'name': model_name,
@@ -140,7 +142,7 @@ def train(args, config, custom_net=False, carry_on=False):
                         f'{idx}-{len(t_dataloader)}-model.pt'
                     )
                 )
-                if not config.getboolean('enable_early_stop'):
+                if not TRAIN_CFG.EARLY_STOP:
                     torch.save({
                             'name': model_name,
                             'model': model.state_dict(),
@@ -196,7 +198,7 @@ def train(args, config, custom_net=False, carry_on=False):
                     .format(epoch+1, Acc_v, E_v_loss)
                 )
         #==================early stopping======================
-        if config.getboolean('enable_early_stop'):
+        if TRAIN_CFG.EARLY_STOP:
             early_stopping(
                 valid_epochs_loss[-1],
                 params={
@@ -221,10 +223,8 @@ def train(args, config, custom_net=False, carry_on=False):
         #     print('Updating learning rate to {}'.format(lr))
         
     #TB Print Loss with epochs when epochs more than 1
-    if config.getint('epochs') > 1:
+    if TRAIN_CFG.EPOCHS > 1:
         for epoch in range(len(train_epochs_loss)):
             writer.add_scalar("T_loss_epochs", train_epochs_loss[epoch], epoch+1)
         for epoch in range(len(valid_epochs_loss)):
             writer.add_scalar("V_loss_epochs", valid_epochs_loss[epoch], epoch+1)
-
-

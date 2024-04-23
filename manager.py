@@ -17,70 +17,70 @@ if __name__ == '__main__':
 
     parser.add_argument('mode', type=str, 
         choices=['train', 'valid', 'compile_model', 'infer', 'show_graphs'])
-    
-    # mode train
-    parser.add_argument('train_dataset', dest='tset', type=str)
-    parser.add_argument('--device', '-d')
-    parser.add_argument('--load_config', '-l', action='append', 
-        dest='f_cfg', help='Load other config file.', 
-        type=FileType('rb'))
-    parser.add_argument('--save_model_path', dest='mod_path',
-        default='./models', type=str)
-    parser.add_argument('--custom_net', action='store_true', default=False, 
-        help='Enable to adjust the struct of network. Will load Config File named "cfg.ini".')
-    parser.add_argument('--carry_on', action='store_true', default=False)
-    parser.add_argument('--use_deepspeed', action='store_ture', default=False)
-    
-    # mode valid (Optional for mode train)
-    parser.add_argument('--validate_dataset', '-v', dest='vset', type=str)
 
-    # mode infer (Also for mode valid)
-    parser.add_argument('--load_model_path', dest='mod_loc',
-        default='./models', type=str)
-    parser.add_argument('--load_on_gpu', type=int, dest='gpu_id',
-        help='The GPU ID loading model. Use single GPU.')
-    
     # Optional for Train, Valid and Infer
     parser.add_argument('--use_lora', action='store_ture', default=False)
     parser.add_argument('--lora_path', type=str, 
         help="Needed by mode valid and infer, please enable use_lora and give the path to LoRA models.")
     
+    # mode train
+    train_group_parser = parser.add_argument_group(title='Train Mode')
+    # -------------------------------------------------------------------- #
+    train_group_parser.add_argument('train_dataset', dest='tset', type=str)
+    train_group_parser.add_argument('--network', dest='model_type', type=str, default='large',
+        choices=['base', 'large', 'custom'])
+    train_group_parser.add_argument('--device', '-d', help="The GPU id to use.")
+    train_group_parser.add_argument('--save_model_path', dest='mod_path', default='./models', type=str)
+    train_group_parser.add_argument('--use_base_model', action='store_true', default=False)
+    train_group_parser.add_argument('--carry_on', action='store_true', default=False)
+    train_group_parser.add_argument('--use_deepspeed', action='store_ture', default=False)
+
+    # mode valid
+    valid_group_parser = parser.add_argument_group(title='Validate Mode')
+    # -------------------------------------------------------------------- #
+    valid_group_parser.add_argument('--load_model_path', dest='mod_loc',
+        default='./models', type=str)
+    valid_group_parser.add_argument('--load_on_gpu', type=int, dest='gpu_id',
+        help='The GPU ID loading model. Use single GPU.')
+
     # mode infer
-    parser.add_argument('--dataset', dest='iset', type=str)
-    
+    infer_group_parser = parser.add_argument_group(title='Inference Mode')
+    # -------------------------------------------------------------------- #
+    infer_group_parser.add_argument('--dataset', dest='iset', type=str)
+    infer_group_parser.add_argument('--load_model_path', dest='mod_loc',
+        default='./models', type=str)
+    infer_group_parser.add_argument('--load_on_gpu', type=int, dest='gpu_id',
+        help='The GPU ID loading model. Use single GPU.')
+
     # mode compile_model
-    parser.add_argument('--model_path', dest='mod2cmp', type=str)
+    compile_group_parser = parser.add_argument_group(title='Compile Mode')
+    # -------------------------------------------------------------------- #
+    compile_group_parser.add_argument('--model_path', dest='mod2cmp', type=str)
     # see https://tvm.apache.org/docs/reference/api/python/target.html#module-tvm.target for detals.
-    parser.add_argument('--compile_mode', dest='cmp_mode', type=str, choices=Target.list_kinds())
-    parser.add_argument('--save_package_path', dest='pkg_path', type=str)
-    parser.add_argument('--tune_mode', dest='tune', action='store_true', default=False)
-    parser.add_argument('--continue_compile', action='store_true', default=False)
-    parser.add_argument('--enable_autoscheduler', dest='autoscheduler', action='store_true', default=False)
-    parser.add_argument('--set_trails', dest='trails', default=10000, type=int)
-    parser.add_argument('--set_timeout', dest='timeout', default=10, type=int)
+    compile_group_parser.add_argument('--compile_mode', dest='cmp_mode', type=str, choices=Target.list_kinds())
+    compile_group_parser.add_argument('--save_package_path', dest='pkg_path', type=str)
+    compile_group_parser.add_argument('--tune_mode', dest='tune', action='store_true', default=False)
+    compile_group_parser.add_argument('--continue_compile', action='store_true', default=False)
+    compile_group_parser.add_argument('--enable_autoscheduler', dest='autoscheduler', action='store_true', default=False)
+    compile_group_parser.add_argument('--set_trails', dest='trails', default=10000, type=int)
+    compile_group_parser.add_argument('--set_timeout', dest='timeout', default=10, type=int)
+    # mode valid (Optional for mode train)
+    compile_group_parser.add_argument('--validate_dataset', '-v', dest='vset', type=str)
 
-    # mode show_graphs
-
-    config = ConfigParser()
     args = parser.parse_args()
 
-    if args.f_cfg is None:
-        config.read(DEFAULT_CONFIG_PATH)
-    else:
-        config.read(args.f_cfg)
-    
     check_devices()    
     init_dirs()
 
     match args.mode:
         case 'train':
-            train(args, config['Train'], custom_net=args.custom_net, carry_on=args.carry_on)
+            train(args, carry_on=args.carry_on)
         case 'valid':
             validate(args=args)
         case 'infer':
             result = inference(args=args)
         case 'compile_model':
-            pass
+            compile_model(args=args)
         case 'show_graphs':
             pass
         
