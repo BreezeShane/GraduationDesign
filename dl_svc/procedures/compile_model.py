@@ -4,7 +4,7 @@ from tvm.driver import tvmc
 TUNING_RECORDS_PATH = ".records.log"
 
 def compile_model(args):
-    if args.cmp_mode is not None:
+    if args.target is not None:
         raise ValueError("The parameter '--compile_mode' is needed!")
     if not os.path.isfile(args.mod2cmp):
         raise ValueError(f"The path to model is needed, but got {args.mod2cmp} which is not file!")
@@ -19,7 +19,7 @@ def compile_model(args):
         'timeout': 10
     }
     if args.tune:
-        tvmc.tune(model, target=args.cmp_mode, 
+        tvmc.tune(model, target=args.target, 
             enable_autoscheduler=args.autoscheduler, 
             trials=args.trails,
             timeout=args.timeout,
@@ -27,7 +27,7 @@ def compile_model(args):
                 if os.path.exists(TUNING_RECORDS_PATH) and args.continue_compile else None
         )
 
-        package = tvmc.compile(model, target=args.cmp_mode, 
+        package = tvmc.compile(model, target=args.target, 
             package_path=args.pkg_path, tuning_records = TUNING_RECORDS_PATH)
     else:
-        package = tvmc.compile(model, target=args.cmp_mode, package_path=args.pkg_path)
+        package = tvmc.compile(model, target=args.target, package_path=args.pkg_path)

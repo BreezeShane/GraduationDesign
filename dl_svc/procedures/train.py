@@ -13,6 +13,8 @@ from dl_svc.Utils.early_stop import EarlyStopping
 from dl_svc.train_config import TRAIN_CFG
 
 def train(args, carry_on=False):
+    if args.tset is None:
+        raise ValueError("The path to train dataset is needed!")
     t_dataloader = load_dataset(args.tset, 
         batch_size=TRAIN_CFG.BATCH_SIZE)
 
