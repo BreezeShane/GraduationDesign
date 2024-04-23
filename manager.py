@@ -10,15 +10,15 @@ from dl_svc.procedures.train import train
 from dl_svc.procedures.infer_et_valid import validate, inference
 
 def init_dirs():
-    create_dir(args.mod_path)
-    create_dir(CHECKPOINT_PATH)
-    create_hidden_dir(TENSORBOARD_DATA_PATH)
+    __create_dir(args.mod_path)
+    __create_dir(CHECKPOINT_PATH)
+    __create_hidden_dir(TENSORBOARD_DATA_PATH)
 
-def create_dir(dir_path):
+def __create_dir(dir_path):
     if not os.path.exists(dir_path):
         os.mkdir(dir_path)
 
-def create_hidden_dir(dir_path):
+def __create_hidden_dir(dir_path):
     if OS_NAME == "linux":
         paths = dir_path.split('/')
         paths[-1] = "." + paths[-1]
