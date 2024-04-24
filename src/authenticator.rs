@@ -117,14 +117,17 @@ pub struct Account {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct RequestAccount {
-    id: u32,
-    nick_name: String,
+pub struct RequestAccountForSignIn {
+    useremail: String,
     password: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RequestAccountForSignUp {
+    username: String,
+    password: String,
+    repassword: String,
     email: String,
-    permissions: i8,
-    contribution: i16,
-    available: bool,
 }
 
 pub async fn check_permission (connection: &Pool, user_id: &String, needed_permission: Permission) -> Result<bool, (StatusCode, String)> {
@@ -194,10 +197,10 @@ pub fn verify_jwt(token: String) -> Result<Claims, Error> {
 
 pub async fn handler_sign_in(
     State(multi_state): State<MultiState>,
-    Form(sign_in_form): Form<RequestAccount>
+    Form(sign_in_form): Form<RequestAccountForSignIn>
 ) -> Result<axum::Json<String>, (StatusCode, String)> {
     let client = multi_state.db_pool.get().await.unwrap();
-    let user_request: RequestAccount = sign_in_form;
+    let user_request: RequestAccountForSignIn = sign_in_form;
 
     let query_statement = client
     .prepare("
@@ -206,7 +209,7 @@ pub async fn handler_sign_in(
     .await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
     let account: Account = client
-    .query(&query_statement, &[&user_request.email])
+    .query(&query_statement, &[&user_request.useremail])
     .await
     .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))? 
     .iter()
@@ -220,7 +223,7 @@ pub async fn handler_sign_in(
     // })
     .collect::<Vec<Account>>()
     .pop()
-    .ok_or((StatusCode::NOT_FOUND, format!("Couldn't find account #{}", user_request.email)))?;
+    .ok_or((StatusCode::NOT_FOUND, format!("Couldn't find account #{}", user_request.useremail)))?;
 
     if !account.available {
         return Err((StatusCode::FORBIDDEN, "The account has been forbidden!".to_string()));
@@ -247,11 +250,14 @@ pub async fn handler_sign_in(
 
 pub async fn handler_sign_up(
     State(multi_state): State<MultiState>,
-    Form(sign_up_form): Form<RequestAccount>
+    Form(sign_up_form): Form<RequestAccountForSignUp>
 ) -> Result<axum::Json<String>, (StatusCode, String)> {
     let client = multi_state.db_pool.get().await.unwrap();
 
     let user_request = sign_up_form;
+    if user_request.password != user_request.repassword {
+        return Err((StatusCode::NON_AUTHORITATIVE_INFORMATION, "The passwords should be the same!".to_string()))
+    }
 
     let query_statement = client
     .prepare("
@@ -286,7 +292,7 @@ pub async fn handler_sign_up(
             let rows = client
             .execute(&insert_statement, 
                 &[
-                    &user_request.nick_name, &passwd_salt, &passwd_hash, &user_request.email, 
+                    &user_request.username, &passwd_salt, &passwd_hash, &user_request.email, 
                     &contribute, &available, &permissions
                 ])
             .await

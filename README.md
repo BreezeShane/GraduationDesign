@@ -84,6 +84,8 @@
 
 ## Dependency
 
+### Next.js + Ant-design
+
 ### Rust >=v1.56
 
 ### PostgreSQL
@@ -100,7 +102,7 @@ createdb InsectSys
 cargo run --bin init # Initialize database.
 ```
 
-### CUDA == v11.7 (Not ensure to support newer version)
+### CUDA == v11.7 (Not ensured to support newer version)
 
 In general, the deep learning would support higher version, as long as DeepSpeed supports PyTorch and PyTorch supports the relative CUDA.
 
