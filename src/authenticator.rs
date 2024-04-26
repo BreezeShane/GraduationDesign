@@ -105,14 +105,11 @@ pub struct Claims {
 
 #[derive(Serialize, Deserialize, PostgresMapper, Clone, Debug)]
 #[pg_mapper(table = "Account")]
-pub struct Account {
-    id: u32,
+struct AuthenAccount {
     nick_name: String,
     password_salt: String,
     password_hash: String,
     email: String,
-    permissions: i16,
-    contribution: i16,
     available: bool,
 }
 
@@ -143,15 +140,15 @@ pub async fn check_permission (connection: &Pool, user_id: &String, needed_permi
 
     let auth_statement = client
     .prepare("
-        SELECT nick_name, email, permissions, available FROM account WHERE email=$1 ORDER BY id DESC LIMIT 1;
+        SELECT email, permissions, available FROM account WHERE email=$1;
     ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
     let current_user = client
     .query(&auth_statement, &[&user_id])
     .await
     .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
     .iter()
-    .map(|row| Account::from_row_ref(row).unwrap())
-    .collect::<Vec<Account>>()
+    .map(|row| ProofAccount::from_row_ref(row).unwrap())
+    .collect::<Vec<ProofAccount>>()
     .pop()
     .ok_or((StatusCode::NOT_FOUND, format!("Couldn't find account: {:?}", user_id)))?;
 
@@ -212,16 +209,16 @@ pub async fn handler_sign_in(
 
     let query_statement = client
     .prepare("
-        SELECT nick_name, password_salt, password_hash, email, available FROM account WHERE email=$1 ORDER BY id DESC LIMIT 1;
+        SELECT nick_name, password_salt, password_hash, email, available FROM account WHERE email=$1;
     ")
     .await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
-    let account: Account = client
+    let account: AuthenAccount = client
     .query(&query_statement, &[&user_request.useremail])
     .await
     .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))? 
     .iter()
-    .map(|row| Account::from_row_ref(row).unwrap())
+    .map(|row| AuthenAccount::from_row_ref(row).unwrap())
     // .map(|row: &tokio_postgres::Row| Account {
     //     id: row.get("id"),
     //     nick_name: row.get("nick_name"),
@@ -229,7 +226,7 @@ pub async fn handler_sign_in(
     //     contribution: row.get("contribution"),
     //     available: row.get("available"),
     // })
-    .collect::<Vec<Account>>()
+    .collect::<Vec<AuthenAccount>>()
     .pop()
     .ok_or((StatusCode::NOT_FOUND, format!("Couldn't find account #{}", user_request.useremail)))?;
 

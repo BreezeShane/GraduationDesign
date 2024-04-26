@@ -59,7 +59,6 @@ export default function Home() {
               <div style={{width: '50%'}}>
                 <Card title='图片上传'>
                   <Upload listType='picture'>
-                    {/* action={`${process.env.BACKEND_API}/${user_name}/upload_pic`} */}
                     <PlusOutlined />
                     <div style={{ marginTop: 8, color: '#666' }}>Upload Images</div>
                   </Upload>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type { FormProps } from 'antd';
-import { Button, Form, Input, Modal } from 'antd';
+import { Button, Form, Input, Modal, notification } from 'antd';
 import { LoginOutlined, LogoutOutlined, UserOutlined, KeyOutlined } from '@ant-design/icons';
+import { POST } from '@/app/Agent';
 
 type FieldType = {
   useremail?: string;
@@ -11,24 +12,36 @@ type FieldType = {
 const SignInButton: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [modalText, setModalText] = useState('Content of the modal');
+  const [api, contextHolder] = notification.useNotification();
   const [form] = Form.useForm();
 
   const showModal = () => {
     setOpen(true);
   };
-
-  const handleOk = () => {
-    setModalText('The modal will be closed after two seconds');
-    setConfirmLoading(true);
-    setTimeout(() => {
-      setOpen(false);
-      setConfirmLoading(false);
-    }, 2000);
-  };
   
   const onFinish: FormProps<FieldType>['onFinish'] = (values) => {
-    console.log('Success:', values);
+    POST('/sign_in', {
+      useremail: values.useremail,
+      password: values.password
+    }).then(function (response) {
+      console.log(response);
+      api.info({
+        message: `Success to sign in!`,
+        description: "Now you can use the insect identifier system!",
+        placement: 'topLeft',
+        duration: 2,
+      });
+      setOpen(false);
+    })
+    .catch(function (error) {
+        console.log(error);
+        api.info({
+          message: `Failed to sign in!`,
+          description: "Please check your user email or password!",
+          placement: 'topLeft',
+          duration: 2,
+        });
+    });
   };
   
   const onFinishFailed: FormProps<FieldType>['onFinishFailed'] = (errorInfo) => {
@@ -45,17 +58,18 @@ const SignInButton: React.FC = () => {
 
   return (
     <>
+      {contextHolder}
       <Button type="primary" shape="round" icon={<LoginOutlined />} size={'large'} onClick={showModal}>
         Sign In
       </Button>
       <Modal title="Title"
         open={open}
-        onOk={handleOk}
         confirmLoading={confirmLoading}
         onCancel={handleCancel}
+        footer={null}
       >
         <Form
-          name="basic"
+          name="sign_in_form"
           form={form}
           labelCol={{ span: 8 }}
           wrapperCol={{ span: 16 }}
@@ -66,7 +80,7 @@ const SignInButton: React.FC = () => {
           autoComplete="off"
         >
           <Form.Item<FieldType>
-            label="Useremail"
+            label="User Email"
             name="useremail"
             rules={[{ required: true, message: 'Please input your username!' }]}
           >
