@@ -1,23 +1,28 @@
-import React, { useState } from 'react';
-import type { FormProps } from 'antd';
+import React, { useCallback, useState } from 'react';
 import { Button, Form, Input, Modal, notification } from 'antd';
 import { LogoutOutlined } from '@ant-design/icons';
 import { setAuthToken } from '@/app/Utils';
-import axios from 'axios';
+import type { SignStatusProperty } from '../NavBar';
 
-const SignOutButton: React.FC = () => {
+const SignOutButton: React.FC<SignStatusProperty> = (props) => {
     const [open, setOpen] = useState(false);
-    const [api, contextHolder] = notification.useNotification();
+    const {signStatus, changeStatus, messageClient} = props;
 
+    const ChangeState = useCallback(() => {
+      changeStatus(!signStatus)
+    },[changeStatus, signStatus])
+    
     const handleOk = () => {
         sessionStorage.clear();
         setAuthToken(undefined);
-        api.info({
+        messageClient.info({
             message: `Success to sign out!`,
             description: "Now you should sign in to use the insect identifier system!",
             placement: 'topLeft',
-            duration: 2,
+            duration: 1,
+            type: 'success'
           });
+        ChangeState();
         setOpen(false);
     }
   
@@ -31,11 +36,10 @@ const SignOutButton: React.FC = () => {
   
     return (
       <>
-        {contextHolder}
         <Button type="primary" shape="round" icon={<LogoutOutlined />} size={'large'} onClick={showModal}>
           Sign Out
         </Button>
-        <Modal title="Caution"
+        <Modal title="Sign Out"
           open={open}
           onOk={handleOk}
           onCancel={handleCancel}

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { FormProps } from 'antd';
 import { Button, Form, Input, Modal, notification } from 'antd';
 import { PlusCircleOutlined, UserOutlined, KeyOutlined, MailOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import type { SignStatusProperty } from '../NavBar';
 
 
 type FieldType = {
@@ -12,10 +13,14 @@ type FieldType = {
   email?: string;
 };
 
-const SignUpButton: React.FC = () => {
+const SignUpButton: React.FC<SignStatusProperty> = (props) => {
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
-  const [api, contextHolder] = notification.useNotification();
+  const {signStatus, changeStatus, messageClient} = props;
+
+  const ChangeState = useCallback(() => {
+    changeStatus(!signStatus)
+  },[changeStatus, signStatus])
 
   const showModal = () => {
     setOpen(true);
@@ -29,21 +34,24 @@ const SignUpButton: React.FC = () => {
       email: values.email
     }).then(function (response) {
       console.log(response);
-      api.info({
+      messageClient.info({
         message: `Success to sign up a new account!`,
         description: "Now you can go to sign in using this account!",
         placement: 'topLeft',
-        duration: 2,
+        duration: 1,
+        type: 'success'
       });
+      ChangeState();
       setOpen(false);
     })
     .catch(function (error) {
         console.log(error);
-        api.info({
+        messageClient.info({
           message: `Failed to sign up a new account!`,
           description: "Please check your inputs!",
           placement: 'topLeft',
-          duration: 2,
+          duration: 1,
+          type: 'success'
         });
     });
     
@@ -64,11 +72,10 @@ const SignUpButton: React.FC = () => {
 
   return (
     <>
-      {contextHolder}
       <Button type="primary" shape="round" icon={<PlusCircleOutlined />} size={'large'} onClick={showModal}>
         Sign Up
       </Button>
-      <Modal title="Title"
+      <Modal title="Sign up"
         open={open}
         onCancel={handleCancel}
         footer={null}

@@ -1,43 +1,36 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import type { MenuProps } from 'antd';
-import { Menu } from 'antd';
-import SignInButton from './FormButtons/SignInButton';
-import SignUpButton from './FormButtons/SignUpButton';
-import SignOutButton from './FormButtons/SignOutButton';
+import { Menu, notification } from 'antd';
+import SignInButton from './Buttons/SignInButton';
+import SignUpButton from './Buttons/SignUpButton';
+import SignOutButton from './Buttons/SignOutButton';
+import { NotificationInstance } from 'antd/es/notification/interface';
 
-const items = [
-  {
-    key: 'sign_out',
-    hidden: true,
-    label: (
-      <SignOutButton />
-    ),
-    
-  },
-  {
-    key: 'sign_up',
-    hidden: false,
-    label: (
-      <SignUpButton />
-    ),
-    
-  },
-  {
-    key: 'sign_in',
-    hidden: false,
-    label: (
-      <SignInButton />
-    ),
-    
-  },
-];
+export type SignStatusProperty = {
+  signStatus: boolean,
+  changeStatus: Function,
+  messageClient: NotificationInstance
+}
 
 const NavBar: React.FC = () => {
-  const [current, setCurrent] = useState('mail');
-  const buttonsRef = useRef(null);
-  const [status, setSignInStatus] = useState(false);
+  const [api, contextHolder] = notification.useNotification();
 
-  return <Menu selectedKeys={[current]} mode="horizontal" items={items} />;
+  const [signStatus, setSignStatus] = useState(false);
+  const changeStatus = useCallback((signStatus: boolean) => {
+    setSignStatus(signStatus);
+  }, []);
+
+  // return <Menu mode='horizontal' items={items}></Menu>
+
+  return (
+  <>
+    {contextHolder}
+    <Menu mode="horizontal">
+      { signStatus ? <SignOutButton signStatus={signStatus} changeStatus={changeStatus} messageClient={api} /> : null }
+      { !signStatus ? <SignUpButton signStatus={signStatus} changeStatus={changeStatus} messageClient={api} /> : null }
+      { !signStatus ? <SignInButton signStatus={signStatus} changeStatus={changeStatus} messageClient={api} /> : null }
+    </Menu>
+  </>);
 };
 
 export default NavBar;

@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { FormProps } from 'antd';
 import { Button, Form, Input, Modal, notification } from 'antd';
-import { LoginOutlined, LogoutOutlined, UserOutlined, KeyOutlined } from '@ant-design/icons';
+import { LoginOutlined, UserOutlined, KeyOutlined } from '@ant-design/icons';
 import { setAuthToken } from '@/app/Utils';
 import axios from 'axios';
+import { sign } from 'crypto';
+import type { SignStatusProperty } from '../NavBar';
 
 type FieldType = {
   useremail?: string;
   password?: string;
 };
 
-const SignInButton: React.FC = () => {
+const SignInButton: React.FC<SignStatusProperty> = (props) => {
+  const {signStatus, changeStatus, messageClient} = props;
   const [open, setOpen] = useState(false);
-  const [api, contextHolder] = notification.useNotification();
+  // const [api, contextHolder] = notification.useNotification();
   const [form] = Form.useForm();
+
+  const ChangeState = useCallback(() => {
+    changeStatus(!signStatus)
+  },[changeStatus, signStatus])
 
   const showModal = () => {
     setOpen(true);
@@ -21,11 +28,12 @@ const SignInButton: React.FC = () => {
   
   const onFinish: FormProps<FieldType>['onFinish'] = (values) => {
     if (sessionStorage.getItem('token')) {
-      api.info({
+      messageClient.info({
         message: `Forbidden Operation!`,
         description: "You have signed in!",
         placement: 'topLeft',
-        duration: 2,
+        duration: 1,
+        type: 'error'
       });
       setOpen(false);
       return;
@@ -35,21 +43,24 @@ const SignInButton: React.FC = () => {
       password: values.password
     }).then(function (response) {
       setAuthToken(JSON.stringify(response));
-      api.info({
+      messageClient.info({
         message: `Success to sign in!`,
         description: "Now you can use the insect identifier system!",
         placement: 'topLeft',
-        duration: 2,
+        duration: 1,
+        type: 'success'
       });
+      ChangeState();
       setOpen(false);
     })
     .catch(function (error) {
         console.log(error);
-        api.info({
+        messageClient.info({
           message: `Failed to sign in!`,
           description: "Please check your user email or password!",
           placement: 'topLeft',
-          duration: 2,
+          duration: 1,
+          type: 'error'
         });
     });
   };
@@ -68,11 +79,10 @@ const SignInButton: React.FC = () => {
 
   return (
     <>
-      {contextHolder}
       <Button type="primary" shape="round" icon={<LoginOutlined />} size={'large'} onClick={showModal}>
         Sign In
       </Button>
-      <Modal title="Title"
+      <Modal title="Sign In"
         open={open}
         onCancel={handleCancel}
         footer={null}
