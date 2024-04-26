@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import type { FormProps } from 'antd';
 import { Button, Form, Input, Modal, notification } from 'antd';
 import { PlusCircleOutlined, UserOutlined, KeyOutlined, MailOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import { POST, GET } from '@/app/Agent';
+import { POST } from '@/app/Agent';
 import type { NotificationArgsProps } from 'antd';
 
 
