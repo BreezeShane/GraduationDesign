@@ -1,9 +1,15 @@
 'use client';
+import axios from 'axios';
 import { Layout, Card, Upload } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import NavBar from './Componets/NavBar';
 
 const { Header, Footer, Sider, Content } = Layout;
+
+// Axios Global Config
+axios.defaults.baseURL = `http://${process.env.BASE_URL}`;
+axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
+axios.defaults.headers.get['Content-Type'] = 'application/x-www-form-urlencoded';
 
 const headerStyle: React.CSSProperties = {
   textAlign: 'center',

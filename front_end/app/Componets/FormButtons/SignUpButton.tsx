@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { FormProps } from 'antd';
 import { Button, Form, Input, Modal, notification } from 'antd';
 import { PlusCircleOutlined, UserOutlined, KeyOutlined, MailOutlined } from '@ant-design/icons';
-import { POST } from '@/app/Agent';
+import axios from 'axios';
 
 
 type FieldType = {
@@ -14,7 +14,6 @@ type FieldType = {
 
 const SignUpButton: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const [confirmLoading, setConfirmLoading] = useState(false);
   const [form] = Form.useForm();
   const [api, contextHolder] = notification.useNotification();
 
@@ -23,7 +22,7 @@ const SignUpButton: React.FC = () => {
   };
   
   const onFinish: FormProps<FieldType>['onFinish'] = (values) => {
-    POST('/sign_up', {
+    axios.post('/sign_up', {
       username: values.username,
       password: values.password,
       repassword: values.repassword,
@@ -72,7 +71,6 @@ const SignUpButton: React.FC = () => {
       <Modal title="Title"
         open={open}
         onCancel={handleCancel}
-        confirmLoading={confirmLoading}
         footer={null}
       >
         <Form

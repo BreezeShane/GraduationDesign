@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import type { FormProps } from 'antd';
 import { Button, Form, Input, Modal, notification } from 'antd';
 import { LoginOutlined, LogoutOutlined, UserOutlined, KeyOutlined } from '@ant-design/icons';
-import { POST } from '@/app/Agent';
+import { setAuthToken } from '@/app/Utils';
+import axios from 'axios';
 
 type FieldType = {
   useremail?: string;
@@ -11,7 +12,6 @@ type FieldType = {
 
 const SignInButton: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const [confirmLoading, setConfirmLoading] = useState(false);
   const [api, contextHolder] = notification.useNotification();
   const [form] = Form.useForm();
 
@@ -20,11 +20,21 @@ const SignInButton: React.FC = () => {
   };
   
   const onFinish: FormProps<FieldType>['onFinish'] = (values) => {
-    POST('/sign_in', {
+    if (sessionStorage.getItem('token')) {
+      api.info({
+        message: `Forbidden Operation!`,
+        description: "You have signed in!",
+        placement: 'topLeft',
+        duration: 2,
+      });
+      setOpen(false);
+      return;
+    }
+    axios.post('/sign_in', {
       useremail: values.useremail,
       password: values.password
     }).then(function (response) {
-      console.log(response);
+      setAuthToken(JSON.stringify(response));
       api.info({
         message: `Success to sign in!`,
         description: "Now you can use the insect identifier system!",
@@ -64,7 +74,6 @@ const SignInButton: React.FC = () => {
       </Button>
       <Modal title="Title"
         open={open}
-        confirmLoading={confirmLoading}
         onCancel={handleCancel}
         footer={null}
       >
