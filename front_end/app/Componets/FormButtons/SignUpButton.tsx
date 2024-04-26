@@ -3,7 +3,6 @@ import type { FormProps } from 'antd';
 import { Button, Form, Input, Modal, notification } from 'antd';
 import { PlusCircleOutlined, UserOutlined, KeyOutlined, MailOutlined } from '@ant-design/icons';
 import { POST } from '@/app/Agent';
-import type { NotificationArgsProps } from 'antd';
 
 
 type FieldType = {
@@ -12,9 +11,6 @@ type FieldType = {
   repassword?: string;
   email?: string;
 };
-
-type NotificationPlacement = NotificationArgsProps['placement'];
-const Context = React.createContext({ name: 'Default' });
 
 const SignUpButton: React.FC = () => {
   const [open, setOpen] = useState(false);
