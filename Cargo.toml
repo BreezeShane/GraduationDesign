@@ -2,6 +2,7 @@
 name = "insects-identifier"
 version = "0.1.0"
 edition = "2021"
+default-run="insects-identifier"
 
 [[bin]] # Initialization of the project
 name = "init"
@@ -14,9 +15,14 @@ path = "src/init_proj/init.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# axum-macros = "0.4.1" ## For debugging handler function
+log = "0.4.21"
+tracing = "0.1.40"
+tracing-appender = "0.2.3"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"]}
 
+# axum-macros = "0.4.1" ## For debugging handler function
 axum = { version = "0.7.4", features = ["ws", "multipart"]}
+tower-http = { version = "0.5.2", features = ["trace", "cors"] }
 tokio = { version = "1.36.0", features = ["full"] }
 futures = "0.3.30"
 # tower = "0.4.13"

@@ -1,6 +1,6 @@
 use data_encoding::HEXUPPER;
 use serde::{Serialize, Deserialize};
-use std::{fs::{self, File}, io::{BufRead, BufReader, Write}, path::{Path, PathBuf}};
+use std::{fs::{self, File}, io::{BufRead, BufReader, Write}, path::PathBuf};
 use crate::config::{
     QUEUE_MAX_LENGTH, 
     QUEUE_STORED_PATH, 
@@ -8,7 +8,7 @@ use crate::config::{
 };
 
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Dataset {
     pub name: String,
     pub timestamp: i64,
@@ -19,7 +19,7 @@ pub type DatasetVec = Vec<Dataset>;
 
 pub trait DatasetTrait {
     fn init_vec() -> DatasetVec;
-    fn load(file_path: impl AsRef<Path>) -> Result<DatasetVec, String>;
+    fn load() -> DatasetVec;
     fn save(&self) -> Result<usize, std::io::Error>;
     fn append_dset(&mut self, dataset: Dataset) -> Result<(), String>;
     fn rm_dset(&mut self, dataset_name: &str) -> Result<(), String>;
@@ -44,30 +44,27 @@ impl DatasetTrait for DatasetVec {
         Ok(())
     }
 
-    fn load(file_path: impl AsRef<Path>) -> Result<DatasetVec, String> {
-        let default_file = File::open(DATASETS_STORED_PATH).unwrap();
-        let file = match File::open(file_path) {
-            Ok(file) => file,
-            Err(_) => default_file
-        };
-
+    fn load() -> DatasetVec {
+        let file = File::open(DATASETS_STORED_PATH).unwrap();
         let buffered = BufReader::new(file);
-
+        
         let mut data_loaded = String::new();
         for data_stream in buffered.lines() {
-            let line = data_stream.map_err(|err| err.to_string())?;
+            let line = data_stream.map_err(|err| err.to_string()).unwrap();
             data_loaded.push_str(line.as_str());
         }
-
-        let data_vec_decoded = 
-            HEXUPPER.decode(data_loaded.as_bytes()).unwrap();
+        
+        let data_vec_decoded: Vec<u8> = match HEXUPPER.decode(data_loaded.as_bytes()) {
+            Ok(data_vec) => data_vec,
+            Err(_) => vec![]
+        };
         let data_string = 
             String::from_utf8(data_vec_decoded).unwrap();
-        
-        let dataset_vec: DatasetVec = 
-            serde_json::from_str(&data_string.as_str())
-                .map_err(|err| err.to_string())?;
-        Ok(dataset_vec)
+        let dataset_vec = match serde_json::from_str(&data_string.as_str()) {
+            Ok(data_json) => data_json,
+            Err(_) => DatasetVec::new()
+        };
+        dataset_vec
     }
 
     fn srch(&self, dataset_name: &str) -> Option<usize> {
@@ -113,13 +110,13 @@ impl DatasetTrait for DatasetVec {
 /// 
 /// Training Queue ↴
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TrainingTask {
     pub pic_path: String,
     pub label: String
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Queue {
     head: usize,
     tail: usize,
@@ -136,7 +133,7 @@ pub trait QueueTrait {
     fn append_task(&mut self, train_unit: TrainingTask) -> Result<(), String>;
     fn pop(&mut self) -> Result<TrainingTask, String>;
     fn save(&self) -> Result<usize, std::io::Error>;
-    fn load(file_path: impl AsRef<Path>) -> Result<Queue, String>;
+    fn load() -> Queue;
 }
 
 impl QueueTrait for Queue {
@@ -184,30 +181,28 @@ impl QueueTrait for Queue {
         file.write(json_encoded.as_bytes())
     }
 
-    fn load(file_path: impl AsRef<Path>) -> Result<Queue, String> {
-        let default_file = File::open(QUEUE_STORED_PATH).unwrap();
-        let file = match File::open(file_path){
-            Ok(file) => file,
-            Err(_) => default_file,
-        };
-
+    fn load() -> Queue {
+        let file = File::open(QUEUE_STORED_PATH).unwrap();
         let buffered = BufReader::new(file);
     
         let mut data_loaded = String::new();
         for data_stream in buffered.lines() {
-            let line = data_stream.map_err(|err| err.to_string())?;
+            let line = data_stream.map_err(|err| err.to_string()).unwrap();
             data_loaded.push_str(line.as_str());
         }
 
-        let data_vec_decoded = 
-            HEXUPPER.decode(data_loaded.as_bytes()).unwrap();
+        let data_vec_decoded: Vec<u8> = match HEXUPPER.decode(data_loaded.as_bytes()) {
+            Ok(data_vec) => data_vec,
+            Err(_) => vec![]
+        };
         let data_string = 
             String::from_utf8(data_vec_decoded).unwrap();
         
-        let queue = 
-            serde_json::from_str(&data_string.as_str())
-                .map_err(|err| err.to_string())?;
-        Ok(queue)
+        let queue = match serde_json::from_str(&data_string.as_str()) {
+            Ok(data_json) => data_json,
+            Err(_) => Queue::init_queue()
+        };
+        queue
     }
 }
 

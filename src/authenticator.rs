@@ -39,12 +39,12 @@ macro_rules! back_to_enum {
             $($(#[$vmeta])* $vname $(= $val)?,)*
         }
 
-        impl std::convert::TryFrom<i8> for $name {
+        impl std::convert::TryFrom<i16> for $name {
             type Error = ();
 
-            fn try_from(v: i8) -> Result<Self, Self::Error> {
+            fn try_from(v: i16) -> Result<Self, Self::Error> {
                 match v {
-                    $(x if x == $name::$vname as i8 => Ok($name::$vname),)*
+                    $(x if x == $name::$vname as i16 => Ok($name::$vname),)*
                     _ => Err(()),
                 }
             }
@@ -103,16 +103,24 @@ pub struct Claims {
     expire_on: usize,
 }
 
-#[derive(Serialize, Deserialize, PostgresMapper, Clone)]
+#[derive(Serialize, Deserialize, PostgresMapper, Clone, Debug)]
 #[pg_mapper(table = "Account")]
 pub struct Account {
     id: u32,
     nick_name: String,
     password_salt: String,
     password_hash: String,
-    pub email: String,
-    pub permissions: i8,
+    email: String,
+    permissions: i16,
     contribution: i16,
+    available: bool,
+}
+
+#[derive(Serialize, Deserialize, PostgresMapper, Clone, Debug)]
+#[pg_mapper(table = "Account")]
+pub struct ProofAccount {
+    pub email: String,
+    pub permissions: i16,
     pub available: bool,
 }
 
@@ -122,7 +130,7 @@ pub struct RequestAccountForSignIn {
     password: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RequestAccountForSignUp {
     username: String,
     password: String,
@@ -261,7 +269,7 @@ pub async fn handler_sign_up(
 
     let query_statement = client
     .prepare("
-        SELECT nick_name, email, available FROM account WHERE email=$1 ORDER BY id DESC LIMIT 1;
+        SELECT email, permissions, available FROM account WHERE email=$1;
     ")
     .await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
@@ -270,15 +278,15 @@ pub async fn handler_sign_up(
     .await
     .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))? 
     .iter()
-    .map(|row| Account::from_row_ref(row).unwrap())
-    .collect::<Vec<Account>>()
+    .map(|row| ProofAccount::from_row_ref(row).unwrap())
+    .collect::<Vec<ProofAccount>>()
     .pop();
 
     match account {
         None => {
             let contribute: i16 = 0;
             let available = true;
-            let permissions = Role::CommonUser as i8;
+            let permissions = Role::CommonUser as i16;
             let (passwd_salt, passwd_hash) = 
                 encrypt(user_request.password);
             
@@ -289,12 +297,18 @@ pub async fn handler_sign_up(
                 ($1, $2, $3, $4, $5, $6, $7)
             ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
+            // let rows = client
+            // .execute(&insert_statement, 
+            //     &[ &user_request.username, &passwd_salt, &passwd_hash, &user_request.email, 
+            //         &contribute, &available, &permissions]
+            // )
+            // .await
+            // .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
             let rows = client
             .execute(&insert_statement, 
-                &[
-                    &user_request.username, &passwd_salt, &passwd_hash, &user_request.email, 
-                    &contribute, &available, &permissions
-                ])
+                &[ &user_request.username, &passwd_salt, &passwd_hash, &user_request.email, 
+                    &contribute, &available, &permissions]
+            )
             .await
             .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
             

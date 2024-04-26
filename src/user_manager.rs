@@ -2,7 +2,7 @@ use axum::{extract::State, http::StatusCode, Form, Json};
 use serde::{Deserialize, Serialize};
 use tokio_pg_mapper::FromTokioPostgresRow;
 
-use crate::{authenticator::{check_permission, Account, Permission}, MultiState};
+use crate::{authenticator::{check_permission, ProofAccount, Permission}, MultiState};
 
 #[derive(Serialize, Deserialize)]
 enum Action {
@@ -35,7 +35,7 @@ pub async fn handler_ban_or_unban_user(
         let client = multi_state.db_pool.get().await.unwrap();
         let query_statement = client
         .prepare("
-            SELECT nick_name, email, permissions, available FROM account WHERE email=$1 ORDER BY id DESC LIMIT 1;
+            SELECT email, permissions, available FROM account WHERE email=$1;
         ").await.map_err(|err| (StatusCode::BAD_REQUEST, format!("Bad query! {}", err)))?;
             
         let user_to_operate = client
@@ -43,8 +43,8 @@ pub async fn handler_ban_or_unban_user(
             .await
             .map_err(|err| (StatusCode::NOT_FOUND, err.to_string()))?
             .iter()
-            .map(|row| Account::from_row_ref(row).unwrap())
-            .collect::<Vec<Account>>()
+            .map(|row| ProofAccount::from_row_ref(row).unwrap())
+            .collect::<Vec<ProofAccount>>()
             .pop()
             .ok_or((StatusCode::NOT_FOUND, format!("Couldn't find account: {:?}", action_request.operated_user_email)));
 

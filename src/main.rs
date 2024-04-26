@@ -8,33 +8,40 @@ pub mod model_manager;
 pub mod authenticator;
 pub mod dl_svc;
 
-use std::{fs::copy, path::PathBuf, sync::{Arc, Mutex}};
+use std::{fs::copy, io, path::PathBuf, sync::{Arc, Mutex}};
 //use tokio::sync::Mutex;
 use authenticator::{handler_sign_in, handler_sign_out, handler_sign_up, middleware_authorize};
-use chrono::Utc;
+use chrono::{Local, Utc};
 use daemon::{Cronie, Daemon};
 use io_cache::{handler_upload_dset, handler_upload_pic};
-use config::{DATASETS_STORED_PATH, QUEUE_STORED_PATH};
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use feedback::{handler_acc_rej_fb, handler_fetch_all_fb, handler_fetch_ufb, handler_label_pic, handler_subm_fb};
 use model_manager::handler_xch_dset_stat;
 use postgres::Client;
 use std::fs::read_dir;
+// use tracing::Level;
+// use tower_http::trace::{self, TraceLayer};
+use tower_http::{trace::TraceLayer, cors::{CorsLayer, Any}};
 use tokio_postgres::{Config, NoTls};
 use axum::{
-    extract::{DefaultBodyLimit, FromRef}, middleware, routing::{get, post}, Router
+    body::Bytes, extract::{DefaultBodyLimit, FromRef, MatchedPath}, http::{HeaderMap, Method, Request}, middleware, response::Response, routing::{get, post}, Router
 };
 use user_manager::handler_ban_or_unban_user;
 use doc_database::{
     DatasetVec, DatasetTrait,
     Queue, QueueTrait
 };
+use std::time::Duration;
+use tokio::net::TcpListener;
+use tower_http::classify::ServerErrorsFailureClass;
+use tracing::{info, info_span, Level, Span};
+use tracing_subscriber::fmt::{format::Writer, time::FormatTime};
 
 use crate::config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH};
 
 // use axum_macros::debug_handler; // Important!
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MultiState {
     db_pool: Pool,
     dset_db: Arc<Mutex<DatasetVec>>,
@@ -56,14 +63,53 @@ impl FromRef<MultiState> for Arc<Mutex<Queue>> {
     }
 }
 
+struct LocalTimer;
+
+impl FormatTime for LocalTimer {
+    fn format_time(&self, w: &mut Writer<'_>) -> std::fmt::Result {
+        write!(w, "{}", Local::now().format("%FT%T%.3f"))
+    }
+}
+
 
 #[tokio::main]
 async fn main() {
+    // let file_appender = tracing_appender::rolling::daily("./tmp", "tracing.log");
+    // let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+
+    let format = tracing_subscriber::fmt::format()
+        .with_level(true)
+        .with_target(true)
+        .with_timer(LocalTimer);
+
+    tracing_subscriber::fmt()
+        .with_max_level(Level::DEBUG)
+        .with_writer(io::stdout)
+        // .with_writer(non_blocking)
+        // .with_ansi(false)
+        .event_format(format)
+        .init(); 
+    // tracing_subscriber::registry()
+    //     .with(
+    //         tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+    //             // axum logs rejections from built-in extractors with the `axum::rejection`
+    //             // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+    //             "example_tracing_aka_logging=debug,tower_http=debug,axum::rejection=trace".into()
+    //         }),
+    //     )
+    //     .with(tracing_subscriber::fmt::layer())
+    //     .init();
+
+    let cors_layer = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_origin(Any)
+        .allow_headers(Any);
+
     let mut config = Config::new();
     config.host("localhost");
     config.user("postgres");
     config.password("postgres");
-    config.dbname("InsectSys");
+    config.dbname("insectsys");
     let mgr_config = ManagerConfig {
         recycling_method: RecyclingMethod::Fast
     };
@@ -73,12 +119,12 @@ async fn main() {
         db_pool: Pool::builder(mgr).max_size(16).build().unwrap(),
         dset_db: Arc::new(
             Mutex::new(
-                DatasetVec::load(DATASETS_STORED_PATH).unwrap()
+                DatasetVec::load()
             )
         ),
         train_queue: Arc::new(
             Mutex::new(
-                Queue::load(QUEUE_STORED_PATH).unwrap()
+                Queue::load()
             )
         )
     };
@@ -106,10 +152,50 @@ async fn main() {
         .route("/sign_in", post(handler_sign_in))
         .route("/sign_up", post(handler_sign_up))
         .with_state(multi_state)
-        .layer(DefaultBodyLimit::max(1024));
+        .layer(DefaultBodyLimit::max(1024))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(|request: &Request<_>| {
+                    // Log the matched route's path (with placeholders not filled in).
+                    // Use request.uri() or OriginalUri if you want the real path.
+                    let matched_path = request
+                        .extensions()
+                        .get::<MatchedPath>()
+                        .map(MatchedPath::as_str);
+                    info_span!(
+                        "http_request",
+                        method = ?request.method(),
+                        matched_path,
+                        some_other_field = tracing::field::Empty,
+                    )
+                })
+                .on_request(|_request: &Request<_>, _span: &Span| {
+                    tracing::debug!("The request body is {:?}, during time {:?}", _request, _span);
+                    // You can use `_span.record("some_other_field", value)` in one of these
+                    // closures to attach a value to the initially empty field in the info_span
+                    // created above.
+                })
+                .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
+                    tracing::debug!("The response is {:?}, during time {:?}, the latency={:?}", _response, _span, _latency);
+                })
+                .on_body_chunk(|_chunk: &Bytes, _latency: Duration, _span: &Span| {
+                    tracing::debug!("The chunk is {:?}, during time {:?}, the latency={:?}", _chunk, _span, _latency);
+                })
+                .on_eos(
+                    |_trailers: Option<&HeaderMap>, _stream_duration: Duration, _span: &Span| {
+                        tracing::debug!("The trailers are {:?}, during time {:?}, the stream duration={:?}", _trailers, _span, _stream_duration);
+                    },
+                )
+                .on_failure(
+                    |_error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
+                        tracing::debug!("The error info is {:?}, during time {:?}, the latency={:?}", _error, _span, _latency);
+                    },
+                ),
+        ).layer(cors_layer);
 
-    // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8080").await.unwrap();
+    // run our app with hyper, listening globally on port 8080
+    let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
+    info!("listening on http://{}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 
     let mut glob_daemon = Daemon::new();
