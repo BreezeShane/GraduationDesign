@@ -3,7 +3,7 @@ use std::{fs::{create_dir, File}, io::Write, path::Path};
 use postgres::{Client, NoTls, Error};
 
 fn main() -> Result<(), Error> {
-    let mut cli = Client::connect("postgresql://postgres:postgres@localhost/InsectSys", NoTls)?;
+    let mut cli = Client::connect("postgresql://postgres:postgres@localhost/insectsys", NoTls)?;
     
     cli.batch_execute("
         CREATE TABLE IF NOT EXISTS Account (
