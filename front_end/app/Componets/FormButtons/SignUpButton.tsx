@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import type { FormProps } from 'antd';
-import { Button, Form, Input, Modal } from 'antd';
-import { PlusCircleOutlined, UserOutlined, KeyOutlined } from '@ant-design/icons';
+import { Button, Form, Input, Modal, notification } from 'antd';
+import { PlusCircleOutlined, UserOutlined, KeyOutlined, MailOutlined } from '@ant-design/icons';
+import axios from 'axios';
+import { POST, GET } from '@/app/Agent';
+import type { NotificationArgsProps } from 'antd';
+
 
 type FieldType = {
   username?: string;
@@ -10,27 +14,45 @@ type FieldType = {
   email?: string;
 };
 
+type NotificationPlacement = NotificationArgsProps['placement'];
+const Context = React.createContext({ name: 'Default' });
+
 const SignUpButton: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [modalText, setModalText] = useState('Content of the modal');
   const [form] = Form.useForm();
+  const [api, contextHolder] = notification.useNotification();
 
   const showModal = () => {
     setOpen(true);
   };
-
-  const handleOk = () => {
-    setModalText('The modal will be closed after two seconds');
-    setConfirmLoading(true);
-    setTimeout(() => {
-      setOpen(false);
-      setConfirmLoading(false);
-    }, 2000);
-  };
   
   const onFinish: FormProps<FieldType>['onFinish'] = (values) => {
-    console.log('Success:', values);
+    POST('/sign_up', {
+      username: values.username,
+      password: values.password,
+      repassword: values.repassword,
+      email: values.email
+    }).then(function (response) {
+      console.log(response);
+      api.info({
+        message: `Success to sign up a new account!`,
+        description: "Now you can go to sign in using this account!",
+        placement: 'topLeft',
+        duration: 2,
+      });
+      setOpen(false);
+    })
+    .catch(function (error) {
+        console.log(error);
+        api.info({
+          message: `Failed to sign up a new account!`,
+          description: "Please check your inputs!",
+          placement: 'topLeft',
+          duration: 2,
+        });
+    });
+    
   };
   
   const onFinishFailed: FormProps<FieldType>['onFinishFailed'] = (errorInfo) => {
@@ -48,14 +70,15 @@ const SignUpButton: React.FC = () => {
 
   return (
     <>
+      {contextHolder}
       <Button type="primary" shape="round" icon={<PlusCircleOutlined />} size={'large'} onClick={showModal}>
         Sign Up
       </Button>
       <Modal title="Title"
         open={open}
-        onOk={handleOk}
-        confirmLoading={confirmLoading}
         onCancel={handleCancel}
+        confirmLoading={confirmLoading}
+        footer={null}
       >
         <Form
           name="sign_up_form"
@@ -63,17 +86,24 @@ const SignUpButton: React.FC = () => {
           labelCol={{ span: 8 }}
           wrapperCol={{ span: 16 }}
           style={{ maxWidth: 600 }}
-          initialValues={{ remember: true }}
           onFinish={onFinish}
           onFinishFailed={onFinishFailed}
           autoComplete="off"
         >
           <Form.Item<FieldType>
-            label="User Email"
-            name="email"
+            label="User Name"
+            name="username"
             rules={[{ required: true, message: 'Please input your username!' }]}
           >
-            <Input size="large" placeholder="User EMail" prefix={<UserOutlined />} />
+            <Input size="large" placeholder="User Name" prefix={<UserOutlined />} />
+          </Form.Item>
+
+          <Form.Item<FieldType>
+            label="User Email"
+            name="email"
+            rules={[{ required: true, message: 'Please input your Email!' }]}
+          >
+            <Input size="large" placeholder="User EMail" prefix={<MailOutlined />} />
           </Form.Item>
 
           <Form.Item<FieldType>
@@ -81,9 +111,9 @@ const SignUpButton: React.FC = () => {
             name="password"
             rules={[{
               required: true,
-              pattern:
-                  /^(?![^a-zA-Z]+$)(?!\\D+$).{8,16}$/,
-              message: "Need 8-16 characters containing letters and numbers",
+              // pattern:
+              //     /^(?![^a-zA-Z]+$)(?!\\D+$).{8,16}$/,
+              // message: "Need 8-16 characters containing letters and numbers",
           }]}
           >
             <Input.Password size="large" placeholder="Password" prefix={<KeyOutlined />} />
