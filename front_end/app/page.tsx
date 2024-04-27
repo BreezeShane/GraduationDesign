@@ -17,7 +17,10 @@ const headerStyle: React.CSSProperties = {
   height: 64,
   paddingInline: 0,
   lineHeight: '64px',
-  backgroundColor: '#4096ff',
+  backgroundColor: '#FCFAF2',
+  borderBottom: "solid",
+  borderWidth: 0.25,
+  borderColor: "#BDC0BA"
 };
 
 const contentStyle: React.CSSProperties = {
@@ -27,7 +30,7 @@ const contentStyle: React.CSSProperties = {
   position: "absolute", 
   width: "100%", 
   left: 0, 
-  top: '10%',
+  top: '11%',
   // minHeight: 120,
   // lineHeight: '120px',
   // color: '#fff',
@@ -56,31 +59,33 @@ const footerStyle: React.CSSProperties = {
 export default function Home() {
   return (
     <main style={{height:"100%", position:"absolute", width:"100%", left:0, top:0}}>
-      <Header style={headerStyle}><NavBar/></Header>
-        <Layout>
-            <Sider width="25%" style={siderStyle}>
-                Sider
-            </Sider>
-            <Content style={contentStyle}>
-              <div style={{width: '50%'}}>
-                <Card title='图片上传'>
-                  <Upload listType='picture'>
-                    <PlusOutlined />
-                    <div style={{ marginTop: 8, color: '#666' }}>Upload Images</div>
-                  </Upload>
-                </Card>
-              </div>
-              <div>
-                <p>
-                  <a>123</a>
-                </p>
-                <p>
-                  Content
-                </p>
-              </div>
-            </Content>
-        </Layout>
-        <Footer style={footerStyle}>Footer</Footer>
+      <Header style={headerStyle}>
+        <NavBar/>
+      </Header>
+      <Layout>
+          <Sider width="25%" style={siderStyle}>
+              Sider
+          </Sider>
+          <Content style={contentStyle}>
+            <div style={{width: '50%'}}>
+              <Card title='图片上传'>
+                <Upload listType='picture'>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 8, color: '#666' }}>Upload Images</div>
+                </Upload>
+              </Card>
+            </div>
+            <div>
+              <p>
+                <a>123</a>
+              </p>
+              <p>
+                Content
+              </p>
+            </div>
+          </Content>
+      </Layout>
+      <Footer style={footerStyle}>Footer</Footer>
     </main>
   );
 }

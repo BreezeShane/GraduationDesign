@@ -13,7 +13,7 @@ type FieldType = {
 };
 
 const SignInButton: React.FC<SignStatusProperty> = (props) => {
-  const {signStatus, changeStatus, messageClient} = props;
+  const {isVisible, signStatus, changeStatus, messageClient} = props;
   const [open, setOpen] = useState(false);
   // const [api, contextHolder] = notification.useNotification();
   const [form] = Form.useForm();
@@ -32,7 +32,7 @@ const SignInButton: React.FC<SignStatusProperty> = (props) => {
         message: `Forbidden Operation!`,
         description: "You have signed in!",
         placement: 'topLeft',
-        duration: 1,
+        duration: 2,
         type: 'error'
       });
       setOpen(false);
@@ -47,7 +47,7 @@ const SignInButton: React.FC<SignStatusProperty> = (props) => {
         message: `Success to sign in!`,
         description: "Now you can use the insect identifier system!",
         placement: 'topLeft',
-        duration: 1,
+        duration: 2,
         type: 'success'
       });
       ChangeState();
@@ -59,7 +59,7 @@ const SignInButton: React.FC<SignStatusProperty> = (props) => {
           message: `Failed to sign in!`,
           description: "Please check your user email or password!",
           placement: 'topLeft',
-          duration: 1,
+          duration: 2,
           type: 'error'
         });
     });
@@ -78,8 +78,8 @@ const SignInButton: React.FC<SignStatusProperty> = (props) => {
   }
 
   return (
-    <>
-      <Button type="primary" shape="round" icon={<LoginOutlined />} size={'large'} onClick={showModal}>
+    <div style={{ width: 130, display: isVisible? "block" : "none" }}>
+      <Button style={{ width: 125 }} type="primary" shape="round" icon={<LoginOutlined />} size={'large'} onClick={showModal}>
         Sign In
       </Button>
       <Modal title="Sign In"
@@ -124,7 +124,7 @@ const SignInButton: React.FC<SignStatusProperty> = (props) => {
           </Form.Item>
         </Form>
       </Modal>
-    </>
+    </div>
   );
 };
 

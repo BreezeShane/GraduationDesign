@@ -1,12 +1,12 @@
 import React, { useCallback, useState } from 'react';
-import { Button, Form, Input, Modal, notification } from 'antd';
+import { Button, Modal } from 'antd';
 import { LogoutOutlined } from '@ant-design/icons';
 import { setAuthToken } from '@/app/Utils';
 import type { SignStatusProperty } from '../NavBar';
 
 const SignOutButton: React.FC<SignStatusProperty> = (props) => {
     const [open, setOpen] = useState(false);
-    const {signStatus, changeStatus, messageClient} = props;
+    const {isVisible, signStatus, changeStatus, messageClient} = props;
 
     const ChangeState = useCallback(() => {
       changeStatus(!signStatus)
@@ -15,11 +15,12 @@ const SignOutButton: React.FC<SignStatusProperty> = (props) => {
     const handleOk = () => {
         sessionStorage.clear();
         setAuthToken(undefined);
+        console.log("Message should be open!")
         messageClient.info({
             message: `Success to sign out!`,
             description: "Now you should sign in to use the insect identifier system!",
             placement: 'topLeft',
-            duration: 1,
+            duration: 2,
             type: 'success'
           });
         ChangeState();
@@ -35,8 +36,8 @@ const SignOutButton: React.FC<SignStatusProperty> = (props) => {
     };
   
     return (
-      <>
-        <Button type="primary" shape="round" icon={<LogoutOutlined />} size={'large'} onClick={showModal}>
+      <div style={{ width: 130, display: isVisible? "block" : "none" }}>
+        <Button style={{ width: 125 }} type="primary" shape="round" icon={<LogoutOutlined />} size={'large'} onClick={showModal}>
           Sign Out
         </Button>
         <Modal title="Sign Out"
@@ -46,7 +47,7 @@ const SignOutButton: React.FC<SignStatusProperty> = (props) => {
         >
             Would you like to sign out?
         </Modal>
-      </>
+      </div>
     );
   };
   

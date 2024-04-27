@@ -16,7 +16,7 @@ type FieldType = {
 const SignUpButton: React.FC<SignStatusProperty> = (props) => {
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
-  const {signStatus, changeStatus, messageClient} = props;
+  const {isVisible, signStatus, changeStatus, messageClient} = props;
 
   const ChangeState = useCallback(() => {
     changeStatus(!signStatus)
@@ -38,7 +38,7 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
         message: `Success to sign up a new account!`,
         description: "Now you can go to sign in using this account!",
         placement: 'topLeft',
-        duration: 1,
+        duration: 2,
         type: 'success'
       });
       ChangeState();
@@ -50,7 +50,7 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
           message: `Failed to sign up a new account!`,
           description: "Please check your inputs!",
           placement: 'topLeft',
-          duration: 1,
+          duration: 2,
           type: 'success'
         });
     });
@@ -71,8 +71,8 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
   }
 
   return (
-    <>
-      <Button type="primary" shape="round" icon={<PlusCircleOutlined />} size={'large'} onClick={showModal}>
+    <div style={{ width: 130, display: isVisible? "block" : "none" }}>
+      <Button style={{ width: 125 }} type="primary" shape="round" icon={<PlusCircleOutlined />} size={'large'} onClick={showModal}>
         Sign Up
       </Button>
       <Modal title="Sign up"
@@ -147,7 +147,7 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
           </Form.Item>
         </Form>
       </Modal>
-    </>
+    </div>
   );
 };
 
