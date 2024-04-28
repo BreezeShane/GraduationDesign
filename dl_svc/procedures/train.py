@@ -1,25 +1,43 @@
-import torch
-from tqdm import tqdm
+"""
+    Training COCA Vit Definition.
+"""
+import math
+import random
 from os.path import join
+import torch
+import numpy as np
+import deepspeed
+from tqdm import tqdm
 from torchsummary import summary
+from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
-from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
+from peft import get_peft_model, LoraConfig, TaskType
 
 from dl_svc.datasetloader import load_dataset
 from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14
 from dl_svc.COCA.coca_vit_custom import coca_vit_custom
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
 from dl_svc.Utils.early_stop import EarlyStopping
-from dl_svc.train_config import TRAIN_CFG
+from dl_svc.config import TRAIN_CFG, TENSORBOARD_DATA_PATH, CHECKPOINT_PATH
+
+def setup_seed(seed):
+    """ Set Seed for Replicability. """
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
 
 def train(args, carry_on=False):
+    """ Train COCA Vit Model. """
+    setup_seed(TRAIN_CFG.SEED)
     if args.tset is None:
         raise ValueError("The path to train dataset is needed!")
-    t_dataloader = load_dataset(args.tset, 
-        batch_size=TRAIN_CFG.BATCH_SIZE)
+    t_dataloader = load_dataset(args.tset, "train.txt", batch_size=TRAIN_CFG.BATCH_SIZE)
 
-    v_dataloader = load_dataset(args.vset, "val.txt", shuffle=False) if args.vset is not None else None
-    
+    v_dataloader = load_dataset(args.vset, "val.txt",
+                                shuffle=False) if args.vset is not None else None
+
     match args.model_type:
         case 'large':
             model = coca_vit_l_14()
@@ -30,23 +48,23 @@ def train(args, carry_on=False):
         case 'custom':
             model = coca_vit_custom()
             model_name = 'coca_vit_custom'
-    
+
     if args.use_lora:
         peft_config = LoraConfig(
-            task_type=TaskType.SEQ_2_SEQ_LM, 
-            inference_mode=False, 
-            r=8, 
-            lora_alpha=32, 
+            task_type=TaskType.SEQ_2_SEQ_LM,
+            inference_mode=False,
+            r=8,
+            lora_alpha=32,
             lora_dropout=0.1
         )
         model = get_peft_model(model, peft_config)
         peft_model_id = f"{model_name}_{peft_config.peft_type}_{peft_config.task_type}"
         model.print_trainable_parameters()
-    
+
     if args.use_deepspeed:
         parameters = filter(lambda p: p.requires_grad, model.parameters())
         model, optimizer, t_dataloader, lr_scheduler = deepspeed.initialize(
-            model=model, model_parameters=parameters, training_data=t_dataset)
+            model=model, model_parameters=parameters, training_data=t_dataloader)
         lr_scheduler.total_num_steps = len(t_dataloader)
     else:
         optimizer = torch.optim.Adam(
@@ -64,10 +82,10 @@ def train(args, carry_on=False):
                 T_max=len(t_dataloader),
                 # eta_min=1e-6
             )
-    
+
     if carry_on:
         checkpoint = torch.load(join(
-            args.mod_path if TRAIN_CFG.EARLY_STOP else CHECKPOINT_PATH, 
+            args.mod_path if TRAIN_CFG.EARLY_STOP else CHECKPOINT_PATH,
             'checkpoint.pth'
             )
         )
@@ -87,16 +105,16 @@ def train(args, carry_on=False):
     )
     if TRAIN_CFG.EARLY_STOP:
         early_stopping = EarlyStopping(
-            TRAIN_CFG.PATIENCE, 
+            TRAIN_CFG.PATIENCE,
             verbose=True,
             delta=0
         )
     writer = SummaryWriter(TENSORBOARD_DATA_PATH)
     #TB Print Model
-    rand_input = torch.rand(1, 3, 224, 224)
-    writer.add_graph(model, 
+    rand_input = torch.randn(1, 3, 224, 224)
+    writer.add_graph(model,
         input_to_model=rand_input)
-    print(summary(net, rand_input, device="cpu"))
+    print(summary(model, rand_input, device="cpu"))
 
     train_epochs_loss = []
     valid_epochs_loss = []
@@ -108,9 +126,11 @@ def train(args, carry_on=False):
         train_epoch_loss = []
         acc, nums = 0., 0
 
-        for idx, (labels, inputss) in enumerate(tqdm(t_dataloader)):
-            inputs = inputs.to(torch.float32).to(model.local_rank if args.use_deepspeed else args.device)
-            labels = labels.to(torch.float32).to(model.local_rank if args.use_deepspeed else args.device)
+        for idx, (labels, inputs) in enumerate(tqdm(t_dataloader)):
+            inputs = inputs.to(torch.float32).to(model.local_rank
+                                                    if args.use_deepspeed else args.device)
+            labels = labels.to(torch.float32).to(model.local_rank
+                                                    if args.use_deepspeed else args.device)
             outputs = model(inputs)
             loss = loss_criterion(outputs, labels)
 
@@ -129,10 +149,11 @@ def train(args, carry_on=False):
             train_epoch_loss.append(loss.item())
             acc += sum(outputs.max(axis=1)[1] == labels).cpu()
             nums += labels.size()[0]
-            
-            if idx % (len(t_dataloader) // 1000) == 0:
-                print("epoch={}/{}, {}/{} of train, loss={}".format(
-                    epoch+1, TRAIN_CFG.EPOCHS, idx, len(t_dataloader), loss.item()))
+
+            len_t_dataloader = len(t_dataloader)
+            if idx % (len_t_dataloader // 1000) == 0:
+                print(f"epoch={epoch+1}/{TRAIN_CFG.EPOCHS}, "
+                      f"{idx}/{len_t_dataloader} of train, loss={loss.item()}")
                 if args.use_lora:
                     model.save_pretrained(join(args.mod_path, peft_model_id))
                 torch.save({
@@ -156,28 +177,24 @@ def train(args, carry_on=False):
                             'common_checkpoint.pth'
                         )
                     )
-            
+
             #TB Print train loss and histogram of parameters' distribution
             writer.add_scalar(f"T_loss_epoch_{epoch+1}", loss.item(), idx)
             writer.add_scalar(f"learning_rate_epoch_{epoch + 1}", lr_scheduler.get_last_lr(), idx)
             for name, param in model.named_parameters():
                 writer.add_histogram(tag=name+'_grad', values=param.grad, global_step=idx)
                 writer.add_histogram(tag=name+'_data', values=param.data, global_step=idx)
-            
-        E_t_loss = np.average(train_epoch_loss)
-        Acc_t = 100 * acc / nums
-        train_epochs_loss.append(E_t_loss)
-        train_acc.append(Acc_t)
-        print(
-            "train acc = {:.3f}%, loss = {}"
-            .format(Acc_t, E_t_loss))
+        t_loss_avg = np.average(train_epoch_loss)
+        t_acc = 100 * acc / nums
+        train_epochs_loss.append(t_loss_avg)
+        train_acc.append(t_acc)
+        print(f"train acc = {t_acc:.3f}%, loss = {t_loss_avg}")
         #=====================valid============================
         if v_dataloader is not None:
             with torch.no_grad():
                 model.eval()
                 valid_epoch_loss = []
                 acc, nums = 0., 0
-                
                 for idx, (labels, inputs) in enumerate(tqdm(v_dataloader)):
                     inputs = inputs.to(torch.float32).to(args.device)
                     labels = labels.to(torch.float32).to(args.device)
@@ -191,14 +208,11 @@ def train(args, carry_on=False):
                     writer.add_scalar(f"V_loss_epoch_{epoch+1}", loss.item(), idx)
 
 
-                E_v_loss = np.average(valid_epoch_loss)
-                Acc_v = 100 * acc / nums
-                valid_epochs_loss.append(E_v_loss)
-                val_acc.append(Acc_v)
-                print(
-                    "epoch = {}, valid acc = {:.3f}%, loss = {}"
-                    .format(epoch+1, Acc_v, E_v_loss)
-                )
+                v_loss_avg = np.average(valid_epoch_loss)
+                v_acc = 100 * acc / nums
+                valid_epochs_loss.append(v_loss_avg)
+                val_acc.append(v_acc)
+                print(f"epoch = {epoch+1}, valid acc = {v_acc:.3f}%, loss = {v_loss_avg}")
         #==================early stopping======================
         if TRAIN_CFG.EARLY_STOP:
             early_stopping(
@@ -223,10 +237,12 @@ def train(args, carry_on=False):
         #     for param_group in optimizer.param_groups:
         #         param_group['lr'] = lr
         #     print('Updating learning rate to {}'.format(lr))
-        
+
     #TB Print Loss with epochs when epochs more than 1
     if TRAIN_CFG.EPOCHS > 1:
-        for epoch in range(len(train_epochs_loss)):
+        len_t_loss_epochs = len(train_epochs_loss)
+        len_v_loss_epochs = len(valid_epochs_loss)
+        for epoch in range(len_t_loss_epochs):
             writer.add_scalar("T_loss_epochs", train_epochs_loss[epoch], epoch+1)
-        for epoch in range(len(valid_epochs_loss)):
+        for epoch in range(len_v_loss_epochs):
             writer.add_scalar("V_loss_epochs", valid_epochs_loss[epoch], epoch+1)
