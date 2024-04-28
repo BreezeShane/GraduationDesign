@@ -19,23 +19,28 @@ from dl_svc.Utils.common import load_module_from_url
 
 class VisionTransformer(nn.Module):
     """
-    General image transformer encoder with embeddings. Similar to ``VisionTransformer`` in torchvision,
-    but more composable. Can be constructed with any user-provided embeddings, encoder, and task head.
+    General image transformer encoder with embeddings. Similar to 
+    ``VisionTransformer`` in torchvision, but more composable. Can be 
+    constructed with any user-provided embeddings, encoder, and task head.
 
     Attributes:
         embeddings (nn.Module): Module that projects image pixels into embeddings.
             See :py:class: PatchEmbeddings for interface.
-        encoder (nn.Module): Module for transformer encoder. See :py:class: TransformerEncoder for interface.
-        pooler (nn.Module, optional): Module for pooler to be applied after layernorm. Defaults to ``None``.
-        weight_init_fn (Callable, optional): function for custom weight initialization of both the transformer
-            encoder and embeddings. See :py:func: init_transformer_weights as an example. Defaults to ``None``.
+        encoder (nn.Module): Module for transformer encoder. 
+            See :py:class: TransformerEncoder for interface.
+        pooler (nn.Module, optional): Module for pooler to be applied after layernorm. 
+            Defaults to ``None``.
+        weight_init_fn (Callable, optional): function for custom weight initialization of 
+            both the transformer encoder and embeddings. 
+            See :py:func: init_transformer_weights as an example. Defaults to ``None``.
 
     Args:
         images (Tensor): Tensor of input images of shape ``(b, c, h, w)``.
-        image_patches_mask (Tensor, optional): Tensor indicating which patches to replace with mask tokens,
-            shape ``(b, seq_len)``, where seq_len = (image_size // patch_size) ** 2
-        attention_mask (Tensor, optional): Tensor indicating which tokens to attend to, shape ``(b, seq_len + 1)``.
-            Concatenating class_token adds 1 to seq_len.
+        image_patches_mask (Tensor, optional): Tensor indicating which patches
+            to replace with mask tokens, shape ``(b, seq_len)``,
+            where seq_len = (image_size // patch_size) ** 2
+        attention_mask (Tensor, optional): Tensor indicating which tokens to attend to,
+            shape ``(b, seq_len + 1)``. Concatenating class_token adds 1 to seq_len.
     """
 
     def __init__(
@@ -60,7 +65,9 @@ class VisionTransformer(nn.Module):
         image_patches_mask: Optional[Tensor] = None,
         attention_mask: Optional[Tensor] = None,
     ) -> TransformerOutput:
-
+        """
+            Definition of VisionTransformer forward. 
+        """
         embedding_output = self.embeddings(
             images, image_patches_mask=image_patches_mask
         ).embeddings
@@ -94,9 +101,10 @@ class GlobalAveragePooler(nn.Module):
     and applies layer norm and an optional linear head on top.
     Args:
         input_dim (int): hidden dim of the transformer last hidden state.
-        output_dim (Optional[int]): output dim of the linear head. if None, no linear head is added. Defaults to None.
-        ln_eps (float): layer norm epsilon. Defaults to 1e-6.
-        init_weights (Optional[Callable]): function to initialize weights of the module. Defaults to None.
+        output_dim (Optional[int]): output dim of the linear head. if None, no linear
+            head is added. Defaults to None. ln_eps (float): layer norm epsilon. Defaults to 1e-6.
+        init_weights (Optional[Callable]): function to initialize weights of the module. 
+            Defaults to None.
 
     """
 
@@ -119,8 +127,8 @@ class GlobalAveragePooler(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         """
         Args:
-            x (Tensor): Input tensor with shape bsz x len x input_dim. The first entry in assumed to be CLS
-                and ignored during averaging
+            x (Tensor): Input tensor with shape bsz x len x input_dim. The first entry in 
+                assumed to be CLS and ignored during averaging
         Returns:
             Tensor: Output tensor with shape bsz x output_dim
         """
@@ -154,27 +162,32 @@ def vision_transformer(
     """
     Args:
         patch_size (int): Size of each patch that the image is divided into.
-        hidden_dim (int): Hidden dimension of the output of patch embedding and input to the transformer
+        hidden_dim (int): Hidden dimension of the output of patch embedding 
+            and input to the transformer
         dim_feedforward (int): Dimension of the feedforward network inside the transformer.
         n_layer (int): Number of hidden layers in the transformer.
         n_head (int): Number of attention heads in the transformer.
-        image_size (Union[int, Tuple[int, int]]): Size of the input image. If tuple, should be height, width. \
-            If int, square input is assumed. Defaults to 224
+        image_size (Union[int, Tuple[int, int]]): Size of the input image. 
+            If tuple, should be height, width. If int, square input is assumed. Defaults to 224
         num_channels (int): Number of channels in the input. Defaults to 3.
         activation (Callable): Activation function for the transformer. Defaults to nn.GELU.
         transformer_dropout (float): Dropout probability for the transformer. Defaults to 0.0.
-        patch_embed_dropout_prob (float): Dropout probability for the patch embedding. Defaults to 0.0.
+        patch_embed_dropout_prob (float): Dropout probability for the patch embedding. 
+            Defaults to 0.0.
         layer_norm_eps (float): layer norm epsilon for the transformer blocks. Defaults to 1e-6.
-        final_layer_norm_eps (Optional[float]) = layer norm epsilon for final ln layer of transformer. Defaults to 1e-6.
-        norm_first(bool): indicates whether layer norm is applied before or after self attention in the transformer block.
-        Defaults to True for vits
-        include_cls_embed (bool): whether to add cls token inside of image embeddings. Defaults to True
-        drop_path_rate (Optional[float]): use stochastic drop path instead of dropout for attn and feedforward dropout
-        in transformer block. Defaults to None.
-        patch_drop_rate (Optional[Union[float, Tuple[float, float]]]): ratio of patches to mask out before passing through encoder
-        as in https://arxiv.org/abs/2212.00794. Set to tuple if dimension wise masking is needed (for 2d masking). Defaults to None.
-        pooler (nn.Module, optional): Pooling function to be applied to the last hidden state from the transformer like avg pooling.
-        Defaults to None
+        final_layer_norm_eps (Optional[float]) = layer norm epsilon for final ln layer of
+            transformer. Defaults to 1e-6.
+        norm_first(bool): indicates whether layer norm is applied before or after self attention
+            in the transformer block. Defaults to True for vits
+        include_cls_embed (bool): whether to add cls token inside of image embeddings.
+            Defaults to True.
+        drop_path_rate (Optional[float]): use stochastic drop path instead of dropout
+            for attn and feedforward dropout in transformer block. Defaults to None.
+        patch_drop_rate (Optional[Union[float, Tuple[float, float]]]): ratio of patches to mask
+            out before passing through encoder as in https://arxiv.org/abs/2212.00794. 
+            Set to tuple if dimension wise masking is needed (for 2d masking). Defaults to None.
+        pooler (nn.Module, optional): Pooling function to be applied to the last hidden
+            state from the transformer like avg pooling. Defaults to None.
     """
     image_embedding = PatchEmbeddings(
         image_size=image_size,
@@ -206,6 +219,7 @@ def vision_transformer(
 
 
 def vit_b_16(pooler: Optional[nn.Module] = None, **kwargs: Any) -> VisionTransformer:
+    """ Return vision transformer base block with 16 pach_size """
     return vision_transformer(
         patch_size=16,
         n_layer=12,
@@ -218,6 +232,7 @@ def vit_b_16(pooler: Optional[nn.Module] = None, **kwargs: Any) -> VisionTransfo
 
 
 def vit_b_32(pooler: Optional[nn.Module] = None, **kwargs: Any) -> VisionTransformer:
+    """ Return vision transformer base block with 32 pach_size """
     return vision_transformer(
         patch_size=32,
         n_layer=12,
@@ -230,6 +245,7 @@ def vit_b_32(pooler: Optional[nn.Module] = None, **kwargs: Any) -> VisionTransfo
 
 
 def vit_l_16(pooler: Optional[nn.Module] = None, **kwargs: Any) -> VisionTransformer:
+    """ Return vision transformer large block with 16 pach_size """
     return vision_transformer(
         patch_size=16,
         n_layer=24,
@@ -242,6 +258,7 @@ def vit_l_16(pooler: Optional[nn.Module] = None, **kwargs: Any) -> VisionTransfo
 
 
 def vit_l_32(pooler: Optional[nn.Module] = None, **kwargs: Any) -> VisionTransformer:
+    """ Return vision transformer large block with 32 pach_size """
     return vision_transformer(
         patch_size=32,
         n_layer=24,
@@ -254,6 +271,7 @@ def vit_l_32(pooler: Optional[nn.Module] = None, **kwargs: Any) -> VisionTransfo
 
 
 def vit_h_14(pooler: Optional[nn.Module] = None, **kwargs: Any) -> VisionTransformer:
+    """ Return vision transformer hyper block with 14 pach_size """
     return vision_transformer(
         patch_size=14,
         n_layer=32,

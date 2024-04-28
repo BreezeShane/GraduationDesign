@@ -1,3 +1,6 @@
+"""
+    Contrastive loss with temperature definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -16,6 +19,7 @@ from dl_svc.Utils.distributed import BackpropType, gather_tensor
 
 @dataclass
 class ContrastiveLossOutput(OrderedDict):
+    """ Contrastive Loss Output Definition """
     loss: Tensor
     logits_a: Tensor
     logits_b: Tensor
@@ -70,7 +74,8 @@ def contrastive_loss_with_temperature(
         backprop_type (BackpropType): whether to backpropagate gradients to all
             workers (GLOBAL), just the local worker (LOCAL), or not at all (NONE).
             Default: BackpropType.GLOBAL
-        cross_entropy_kwargs (Optional[Dict[str, Any]]): Any additional inputs to cross entropy loss (ex: label_smoothing)
+        cross_entropy_kwargs (Optional[Dict[str, Any]]): Any additional inputs to cross
+            entropy loss (ex: label_smoothing)
 
     Returns:
         ContrastiveLossOutput: instance of ContrastiveLossOutput with all of the
@@ -154,7 +159,8 @@ class ContrastiveLossWithTemperature(nn.Module):
             backprop_type (BackpropType): whether to backpropagate gradients to all
                 workers (GLOBAL), just the local worker (LOCAL), or not at all (NONE).
                 Default: BackpropType.GLOBAL
-            cross_entropy_kwargs (Optional[Dict[str, Any]]): Any additional inputs to cross entropy loss (ex: label_smoothing)
+            cross_entropy_kwargs (Optional[Dict[str, Any]]): Any additional inputs to cross
+                entropy loss (ex: label_smoothing)
             mask (Optional[Tensor], optional): If certain elements of the inputs shouldn't
                 be considered in the loss calculation use this option to pass a boolean
                 mask. Size is (BatchSize,). Defaults to None.
@@ -190,7 +196,7 @@ class ContrastiveLossWithTemperature(nn.Module):
         cross_entropy_kwargs: Optional[Dict[str, Any]] = None,
         mask: Optional[Tensor] = None,
     ) -> Tensor:
-
+        """ Definition of Loss forward method. """
         self.logit_scale.data.clamp_(self.logit_scale_min, self.logit_scale_max)
         return contrastive_loss_with_temperature(
             embeddings_a=embeddings_a,

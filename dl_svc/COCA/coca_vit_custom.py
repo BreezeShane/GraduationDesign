@@ -1,6 +1,13 @@
+"""
+    COCA Vit Custom Model Definition. 
+"""
+from torch import nn
 from dl_svc.COCA.coca_model import coca_vit
 
 def coca_vit_custom():
+    """
+        Edit it directly if you want to change the struct.
+    """
     return coca_vit(
             # Required vision args
             vision_patch_size=32,

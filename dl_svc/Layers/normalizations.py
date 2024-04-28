@@ -1,3 +1,6 @@
+"""
+    Fp32 Norm Layer Definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -11,6 +14,7 @@ from torch import nn, Tensor
 
 
 class Fp32LayerNorm(nn.LayerNorm):
+    """ Fp32LayerNorm """
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -70,6 +74,7 @@ class RMSNorm(nn.Module):
         return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
 
     def forward(self, x: Tensor) -> Tensor:
+        """ Definition of layer forward method. """
         x_normed = self._norm(x.float()).type_as(x)
         return x_normed * self.scale
 
@@ -92,5 +97,6 @@ class SimpleRMSNorm(nn.Module):
         self.eps = eps
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """ Definition of layer forward method. """
         denom = x.norm(p=2, dim=-1, keepdim=True).clamp_min(self.eps).expand_as(x)
         return (x / denom) * self.scaling

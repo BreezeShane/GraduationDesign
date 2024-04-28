@@ -1,3 +1,6 @@
+"""
+    Common Utils Definitions.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -13,11 +16,12 @@ from typing import Any, Callable, List, Tuple, Union
 import torch
 from torch import nn, Tensor
 from torch.utils.checkpoint import checkpoint
-from .file_io import _get_path_manager
+from dl_svc.Utils.file_io import _get_path_manager
 
 
 
 def get_current_device() -> Union[str, torch.device]:
+    """ Get current device to use. """
     if torch.cuda.is_available() and torch.cuda.is_initialized():
         return f"cuda:{torch.cuda.current_device()}"
     else:
@@ -35,9 +39,12 @@ def shift_dim(
 
     Args:
         x (Tensor): input Tensor you want to permute
-        src_dim (int, optional): the axis you want to move. Negative indexing supported. Defaults to -1.
-        dest_dim (int, optional): the axis you want to move to. Negative indexing supported. Defaults to -1.
-        make_contiguous (bool, optional): if you want the output tensor to be contiguous in memory. Defaults to True.
+        src_dim (int, optional): the axis you want to move. Negative indexing supported. 
+            Defaults to -1.
+        dest_dim (int, optional): the axis you want to move to. Negative indexing supported. 
+            Defaults to -1.
+        make_contiguous (bool, optional): if you want the output tensor to be contiguous in memory. 
+            Defaults to True.
 
     Returns:
         Tensor: permuted Tensor
@@ -76,8 +83,9 @@ def tensor_slice(x: Tensor, begin: List[int], size: List[int]) -> Tensor:
     Args:
         x (Tensor): tensor to be sliced.
         begin (List[int]): list of starts corresponding to each dimension.
-        size (List[int]): list of increments with respect to the starts along each dimension. Specifically,
-                        ``-1`` means slicing from begin to the last element (inclusive) of that dimension.
+        size (List[int]): list of increments with respect to the starts along each dimension. 
+            Specifically, ``-1`` means slicing from begin to the last element (inclusive) of
+            that dimension.
 
     Returns:
         The sliced tensor.
@@ -100,6 +108,8 @@ def tensor_slice(x: Tensor, begin: List[int], size: List[int]) -> Tensor:
 def load_module_from_url(
     model: nn.Module, url: str, strict: bool = True, progress: bool = True
 ) -> None:
+    """ Load module from url """
+    _progress = progress
     local_path = _get_path_manager().get_local_path(url)
     if not torch.cuda.is_available():
         state_dict = torch.load(local_path, map_location=torch.device("cpu"))
@@ -110,17 +120,22 @@ def load_module_from_url(
 
 @torch.no_grad()
 def remove_grad(model: nn.Module) -> None:
+    """ Remove the grad for no traning. """
     for param in model.parameters():
         param.requires_grad = False
 
 
 @torch.no_grad()
 def momentum_update(model: nn.Module, model_m: nn.Module, momentum: float) -> None:
+    """ update momentum """
     for param, param_m in zip(model.parameters(), model_m.parameters()):
         param_m.data = param_m.data * momentum + param.data * (1 - momentum)
 
 
 class ModelOutput(OrderedDict):
+    """
+        Model Output Definition.
+    """
     def keys(self) -> Any:
         for field in fields(self):  # type: ignore
             yield field.name
@@ -155,18 +170,22 @@ def to_tuple_tuple(
 
 
 def checkpoint_wrapper(fn: Callable) -> Callable:
-    """Decorator to render an nn.Module instance method in checkpointing mode to save memory for training"""
+    """
+        Decorator to render an nn.Module instance method in checkpointing mode to 
+        save memory for training
+    """
 
     def inner(cls: nn.Module, *inputs: Any, **kwargs: Any) -> Tensor:
         if cls.training:
-            # By default the checkpoint API stashes and restores the RNG state during each checkpointed
-            # segment such that checkpointed passes making use of RNG (e.g., through dropout, batch norm)
-            # have deterministic outputs as compared to non-checkpointed passes. This can incur a moderate
-            # performance hit which we mitigate by checkpointing either before and after the layer that
-            # requires RNG.
+            # By default the checkpoint API stashes and restores the RNG state during each
+            # checkpointed segment such that checkpointed passes making use of RNG (e.g., through
+            # dropout, batch norm) have deterministic outputs as compared to non-checkpointed
+            # passes. This can incur a moderate performance hit which we mitigate by checkpointing
+            # either before and after the layer that requires RNG.
             if "use_cache" in kwargs and kwargs["use_cache"] is True:
                 warnings.warn(
-                    "Using `cache` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                    "Using `cache` is incompatible with gradient checkpointing. "
+                    "Setting `use_cache=False`..."
                 )
                 kwargs["use_cache"] = False
 
@@ -177,7 +196,7 @@ def checkpoint_wrapper(fn: Callable) -> Callable:
 
                 return custom_forward
 
-            # TODO: allow user to pass through use_reentrant
+            # In plan: allow user to pass through use_reentrant
             return checkpoint(create_custom_forward(fn), *inputs, use_reentrant=True)
 
         else:
@@ -187,6 +206,7 @@ def checkpoint_wrapper(fn: Callable) -> Callable:
 
 
 def get_clones(module: nn.Module, n: int) -> nn.ModuleList:
+    """ Clone the module. """
     return nn.ModuleList([deepcopy(module) for i in range(n)])
 
 

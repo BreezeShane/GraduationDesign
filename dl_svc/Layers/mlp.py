@@ -1,3 +1,6 @@
+"""
+    Multi-layer Perceptron Module Definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -29,7 +32,6 @@ class MLP(nn.Module):
 
     Inputs:
         x (Tensor): Tensor containing a batch of input sequences.
-    ​
     """
 
     def __init__(
@@ -63,4 +65,5 @@ class MLP(nn.Module):
         self.model = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """ Definition of the forward method. """
         return self.model(x)

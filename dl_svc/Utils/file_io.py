@@ -1,3 +1,6 @@
+"""
+    File I/O Procedure Definitions.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -10,7 +13,6 @@ from iopath.common.file_io import HTTPURLHandler, PathManager
 def _get_path_manager() -> PathManager:
     try:
         from torchmultimodal.fb.utils.file_io import FBPathManager, register_handlers
-
         pm = FBPathManager()
         register_handlers(pm)
         return pm

@@ -1,3 +1,6 @@
+"""
+    Multi modal decoder definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -86,11 +89,15 @@ class CoCaMultimodalDecoder(nn.Module):
     def forward(self, texts: Tensor, images: Tensor) -> Tensor:
         """
         Args:
-            texts (Tensor): Tensor containing text embeddings of shape [batch_size, text_seq_length, embeddings_dim]
-            images (Tensor): Tensor containing image embeddings of shape [batch_size, image_seq_length, embeddings_dim]
-            text_causal_mask (Tensor): Tensor containing causal mask of shape [text_seq_length, text_seq_length]
+            texts (Tensor): Tensor containing text embeddings of shape
+                [batch_size, text_seq_length, embeddings_dim]
+            images (Tensor): Tensor containing image embeddings of shape
+                [batch_size, image_seq_length, embeddings_dim]
+            text_causal_mask (Tensor): Tensor containing causal mask of shape
+                [text_seq_length, text_seq_length]
         Returns:
-        Tensor: Tensor containing output embeddings of shape [batch_size, text_seq_length, output_dim]
+            Tensor: Tensor containing output embeddings of shape
+                [batch_size, text_seq_length, output_dim]
         """
         seq_len = texts.shape[1]
         assert self.causal_mask.shape == (seq_len, seq_len)

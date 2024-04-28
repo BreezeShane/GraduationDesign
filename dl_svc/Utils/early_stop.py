@@ -1,3 +1,7 @@
+"""
+    Early Stop Definition.
+"""
+from os.path import join
 import numpy as np
 import torch
 
@@ -46,13 +50,14 @@ class EarlyStopping:
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             self.trace_func(
-                f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+                'Validation loss decreased '
+                f'({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model...')
         torch.save({
                 'name': params['name'],
                 'model': params['model'],
                 'opt': params['optimizer'],
                 'scheduler': params['scheduler']
             },
-            os.path.join(path, 'checkpoint.pth')
+            join(path, 'checkpoint.pth')
         )
         self.val_loss_min = val_loss

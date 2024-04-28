@@ -1,3 +1,6 @@
+"""
+    Text Decoder Definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -47,9 +50,11 @@ class CoCaTextEmbeddings(nn.Module):
         self.position_embeddings = nn.Parameter(
             torch.empty(num_positions, embedding_dim)
         )
+        """ Initialize parameters. """
         self.init_parameters()
 
     def init_parameters(self) -> None:
+        """ Initialize parameters. """
         nn.init.normal_(self.token_embeddings.weight, std=0.02)
         nn.init.normal_(self.position_embeddings, std=0.01)
         if self.cls_embedding is not None:
@@ -160,6 +165,7 @@ class CoCaTextDecoder(nn.Module):
         self.init_parameters(embedding_dim, n_layer)
 
     def init_parameters(self, embedding_dim: int, n_layer: int) -> None:
+        """ Initialize parameters. """
         # Initialization based on https://tinyurl.com/cmm7cwjt
         attn_std = embedding_dim**-0.5
         proj_std = (2 * embedding_dim * n_layer) ** -0.5
@@ -178,6 +184,7 @@ class CoCaTextDecoder(nn.Module):
         input_ids: Tensor,
         padding_mask: Optional[Tensor] = None,
     ) -> Tensor:
+        """ Build mask filter. """
         # If no CLS token, we can directly return the causal mask
         if not self.embed_cls or self.pad_idx is None:
             return self.causal_mask

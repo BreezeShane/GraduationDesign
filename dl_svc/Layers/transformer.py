@@ -1,3 +1,6 @@
+"""
+    Transformer Definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -10,17 +13,19 @@ from typing import Callable, List, NamedTuple, Optional, Tuple
 import torch
 
 from torch import nn, Tensor
-from .mlp import MLP
-from .multi_head_attention import (
+from torchvision.ops.stochastic_depth import StochasticDepth
+
+from dl_svc.Layers.mlp import MLP
+from dl_svc.Layers.multi_head_attention import (
     MHAWithCacheOutput,
     MultiHeadAttentionWithCache,
     MultiHeadSelfAttention,
 )
-from .normalizations import Fp32LayerNorm
-from torchvision.ops.stochastic_depth import StochasticDepth
+from dl_svc.Layers.normalizations import Fp32LayerNorm
 
 
 class TransformerOutput(NamedTuple):
+    """ Transformer Output """
     last_hidden_state: Optional[Tensor] = None
     pooler_output: Optional[Tensor] = None
     hidden_states: Optional[List[Tensor]] = None
@@ -30,8 +35,9 @@ class TransformerOutput(NamedTuple):
 
 
 class TransformerEncoderLayer(nn.Module):
-    """Transformer encoder layer: transformer block consisting of multihead self-attention and feedforward blocks,
-    based on "Attention Is All You Need" (Vaswani et al. 2017).
+    """Transformer encoder layer: transformer block consisting of multihead
+    self-attention and feedforward blocks, based on "Attention Is All You Need"
+    (Vaswani et al. 2017).
 
     Args:
         d_model (int): size of hidden dimension of input
@@ -42,8 +48,9 @@ class TransformerEncoderLayer(nn.Module):
         layer_norm_eps (float): the eps value in layer norms. Default is 1e-12.
         norm_first (bool): if True, layer norm is done prior to each of self-attention
             and feedforward. Otherwise, layer norm is done after. Defaults to False
-        drop_path_rate (Optional[float]): use stochastic drop path instead of dropout for attn and feedforward dropout
-        in transformer block as used by vision transformers https://arxiv.org/pdf/1603.09382.pdf. Defaults to None.
+        drop_path_rate (Optional[float]): use stochastic drop path instead of dropout
+            for attn and feedforward dropout in transformer block as used by vision 
+            transformers https://arxiv.org/pdf/1603.09382.pdf. Defaults to None.
     """
 
     def __init__(
@@ -136,9 +143,10 @@ class TransformerEncoderLayer(nn.Module):
     ) -> Tensor:
         """
         Args:
-            hidden_states (Tensor): input to the transformer encoder layer of shape bsz x seq_len x d_model
-            attention_mask (Optional[Tensor]): attention mask of shape bsz x seq_len x seq_len.
-            Same format as MultiHeadSelfAttention class.
+            hidden_states (Tensor): input to the transformer encoder layer of
+            shape bsz x seq_len x d_model attention_mask (Optional[Tensor]): 
+            attention mask of shape bsz x seq_len x seq_len. Same format as
+            MultiHeadSelfAttention class.
 
         Returns:
             output tensor of shape bsz x seq_len x d_model
@@ -170,8 +178,9 @@ class TransformerEncoder(nn.Module):
         norm_first (bool): if True, layer norm is done prior to each of self-attention
             and feedforward. Otherwise, layer norm is done after. Defaults to False
         final_layer_norm_eps (Optional[float]): eps for final layer norm. Defaults to None.
-        drop_path_rate (Optional[float]): use stochastic drop path instead of dropout for attn and feedforward dropout
-        in transformer block sometimes used by vision transformers https://arxiv.org/pdf/1603.09382.pdf. Defaults to None.
+        drop_path_rate (Optional[float]): use stochastic drop path instead of dropout for
+            attn and feedforward dropout in transformer block sometimes used by vision 
+            transformers https://arxiv.org/pdf/1603.09382.pdf. Defaults to None.
     """
 
     def __init__(
@@ -219,16 +228,18 @@ class TransformerEncoder(nn.Module):
     ) -> TransformerOutput:
         """
         Args:
-            hidden_states (Tensor): input to the transformer encoder of shape bsz x seq_len x d_model
+            hidden_states (Tensor): input to the transformer encoder of
+                shape bsz x seq_len x d_model.
             attention_mask (Optional[Tensor]): attention mask of shape bsz x seq_len x seq_len.
-            Same format as MultiHeadSelfAttention class.
-            return_hidden_states (bool): if True, return output from each layer of transformer including the input to first layer.
-            Defaults to False.
+                Same format as MultiHeadSelfAttention class.
+            return_hidden_states (bool): if True, return output from each layer of
+                transformer including the input to first layer. Defaults to False.
 
         Returns:
             output of TransformerOutput type with the final output in last_hidden_state field.
-            If return_hidden_states is set to True, the hidden_states field contains list of n_layer + 1 layer outputs.
-            The last entry in the list is the output from last encoder block before final ln has been applied.
+            If return_hidden_states is set to True, the hidden_states field contains
+            list of n_layer + 1 layer outputs. The last entry in the list is the output
+            from last encoder block before final ln has been applied.
         """
 
         all_hidden_states = []
@@ -292,9 +303,7 @@ class TransformerDecoderLayer(nn.Module):
         dim_kv: Optional[int] = None,
     ) -> None:
         super().__init__()
-        if dim_kv is not None:
-            dim_kv = dim_kv
-        else:
+        if dim_kv is None:
             dim_kv = d_model
 
         # Self-attention block
@@ -377,7 +386,7 @@ class TransformerDecoderLayer(nn.Module):
             key=encoder_hidden_states,
             value=encoder_hidden_states,
             attn_mask=cross_attention_mask,
-            # TODO: figure out caching for cross-attention
+            # In Plan: figure out caching for cross-attention
             use_cache=False,
         )
         assert isinstance(output, Tensor), "cross-attention output must be Tensor."
@@ -624,6 +633,7 @@ class TransformerDecoder(nn.Module):
                 present_key_value (Optional[Tuple[Tensor, Tensor]]): key/value tuple
                     for self-attention.
         """
+        _cross_attention_mask = cross_attention_mask
 
         all_hidden_states = []
 

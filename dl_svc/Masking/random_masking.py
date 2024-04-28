@@ -1,3 +1,6 @@
+"""
+    Random Masking Output Definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -12,6 +15,7 @@ from torch import Tensor
 
 
 class RandomMaskingOutput(NamedTuple):
+    """ Random Masking Output """
     x_masked: Tensor
     mask: Tensor
     ids_restore: Tensor

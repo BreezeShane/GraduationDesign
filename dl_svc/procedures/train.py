@@ -111,9 +111,8 @@ def train(args, carry_on=False):
         )
     writer = SummaryWriter(TENSORBOARD_DATA_PATH)
     #TB Print Model
-    rand_input = torch.randn(1, 3, 224, 224)
-    writer.add_graph(model,
-        input_to_model=rand_input)
+    rand_input = (torch.randn(1, 3, 256, 256), torch.randn(1, 1))
+    writer.add_graph(model, input_to_model=rand_input)
     print(summary(model, rand_input, device="cpu"))
 
     train_epochs_loss = []

@@ -1,3 +1,6 @@
+"""
+COCA Model Definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -11,8 +14,8 @@ from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
-from .multimodal_decoder import CoCaMultimodalDecoder
-from .text_decoder import CoCaTextDecoder
+from dl_svc.COCA.multimodal_decoder import CoCaMultimodalDecoder
+from dl_svc.COCA.text_decoder import CoCaTextDecoder
 from dl_svc.Encoder.vision_transformer import vision_transformer
 from dl_svc.Layers.attention_pooler import (
     AttentionPooler,
@@ -25,6 +28,7 @@ from dl_svc.Loss.contrastive_loss_with_temperature import (
 
 
 class MultimodalOutput(NamedTuple):
+    """ Multimodal Output Definition """
     image_pooled_output: Tensor
     text_pooled_output: Tensor
     multimodal_embeddings: Tensor
@@ -349,6 +353,7 @@ def coca_vit(
 
 
 def coca_vit_b_32() -> CoCaModel:
+    """ Return COCA Vit Base Model. """
     return coca_vit(
         vision_patch_size=32,
         vision_n_layer=12,
@@ -374,6 +379,7 @@ def coca_vit_b_32() -> CoCaModel:
 
 
 def coca_vit_l_14() -> CoCaModel:
+    """ Return COCA Vit Large Model. """
     return coca_vit(
         vision_patch_size=14,
         vision_n_layer=24,
@@ -489,10 +495,12 @@ class CoCaModelWithHeads(nn.Module):
         self.model = model
         self.heads = heads
         self.pooler = pooler
+        self.pad_idx= pad_idx
 
     def forward(
         self, images: Tensor, texts: Tensor, text_padding_mask: Optional[Tensor] = None
     ) -> Dict[str, Tensor]:
+        """ Model Forward Definition. """
 
         model_out = self.model(images, texts, text_padding_mask)
         mm_out = model_out.multimodal_embeddings

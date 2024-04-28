@@ -98,7 +98,8 @@ class PatchEmbeddings(nn.Module):
         pixel_values: Tensor,
         image_patches_mask: Optional[Tensor] = None,
     ) -> PatchEmbeddingsOutput:
-        batch_size, num_channels, height, width = pixel_values.shape
+        """ Definition of patch embeddings forward method. """
+        batch_size, _num_channels, height, width = pixel_values.shape
         if height != self.image_size[0] or width != self.image_size[1]:
             raise ValueError(
                 f"Input image size ({height}*{width}) doesn't match image size \

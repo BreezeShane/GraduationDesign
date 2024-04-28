@@ -1,3 +1,6 @@
+"""
+    Multi Head Attention Definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -13,6 +16,7 @@ from torch import nn, Tensor
 
 
 class MHAWithCacheOutput(NamedTuple):
+    """ Multi Head Attention with Cache Output. """
     attn_output: Tensor
     past_key_value: Tuple[Tensor, Tensor]
 
@@ -20,9 +24,10 @@ class MHAWithCacheOutput(NamedTuple):
 class MultiHeadSelfAttention(nn.Module):
     """
     Multihead self attention.
-    Similar to the self attention variant of MHA in attention.py but uses the scaled_dot_product_attention from PyTorch
-    (which uses flash or memory efficient version for certain conditions).
-    TODO: merge this into attention.py once other models are ready to use it.
+    Similar to the self attention variant of MHA in attention.py but uses the
+    scaled_dot_product_attention from PyTorch (which uses flash or memory
+    efficient version for certain conditions). 
+    In Plan: merge this into attention.py once other models are ready to use it.
 
     Args:
         embed_dim (int): embedding dimension of the input
@@ -46,12 +51,14 @@ class MultiHeadSelfAttention(nn.Module):
         """
         Args:
             query (Tensor): input query of shape bsz x seq_len x embed_dim
-            attn_mask (optional Tensor): attention mask of shape bsz x num_heads x seq_len x seq_len.
-            Note that the num_heads dimension can equal 1 and the mask will be broadcasted to all heads.
-            Two types of masks are supported.
-            A boolean mask where a value of True indicates that the element should take part in attention.
-            A float mask of the same type as query that is added to the attention score.
-            is_causal (bool): If true, does causal attention masking. attn_mask should be set to None if this is set to True
+            attn_mask (optional Tensor): attention mask of 
+                shape bsz x num_heads x seq_len x seq_len. Note that the num_heads
+                dimension can equal 1 and the mask will be broadcasted to all heads.
+                Two types of masks are supported. A boolean mask where a value of True 
+                indicates that the element should take part in attention. A float mask of
+                the same type as query that is added to the attention score.
+            is_causal (bool): If true, does causal attention masking. attn_mask should
+                be set to None if this is set to True.
 
         Returns:
             attention output Tensor of shape bsz x seq_len x embed_dim
@@ -130,15 +137,19 @@ class MultiHeadAttentionWithCache(nn.Module):
             query (Tensor): input query of shape bsz x target_seq_len x embed_dim
             key (Tensor): key of shape bsz x source_seq_len x embed_dim
             value (Tensor): value of shape bsz x source_seq_len x embed_dim
-            attn_mask (optional Tensor): Attention mask of shape bsz x num_heads x target_seq_len x source_seq_len.
-                Note that the num_heads dimension can equal 1 and the mask will be broadcasted to all heads.
-                Two types of masks are supported. A boolean mask where a value of True
-                indicates that the element *should* take part in attention.
-                A float mask of the same type as query, key, value that is added to the attention score.
-            past_key_value (optional tuple of tensors): cached key and value with the same shape of key, value inputs.
-                The size of tuple should be 2, where the first entry is for cached key and second entry is for cached value.
-            is_causal (bool): If true, does causal attention masking, attn_mask should be set to None if this is set to True
-                 is_causal is a hint that the mask is a causal mask, providing incorrect hints can result in incorrect execution.
+            attn_mask (optional Tensor): Attention mask of
+                shape bsz x num_heads x target_seq_len x source_seq_len. Note that the
+                num_heads dimension can equal 1 and the mask will be broadcasted to all
+                heads. Two types of masks are supported. A boolean mask where a value of
+                True indicates that the element *should* take part in attention. A float
+                mask of the same type as query, key, value that is added to the attention
+                score.
+            past_key_value (optional tuple of tensors): cached key and value with the 
+                same shape of key, value inputs. The size of tuple should be 2, where 
+                the first entry is for cached key and second entry is for cached value.
+            is_causal (bool): If true, does causal attention masking, attn_mask should
+                be set to None if this is set to True is_causal is a hint that the mask
+                is a causal mask, providing incorrect hints can result in incorrect execution.
             use_cache (bool): whether to use cache for key and value tensors
 
         Returns:
@@ -168,7 +179,8 @@ class MultiHeadAttentionWithCache(nn.Module):
         # we need explicitly turn off dropout under eval mode
         dropout = self.dropout if self.training else 0.0
 
-        # turn off causal attention inside scaled_dot_product_attention, we handle it separately with attn_mask.
+        # turn off causal attention inside scaled_dot_product_attention, we handle
+        # it separately with attn_mask.
         attn = F.scaled_dot_product_attention(
             query, key, value, attn_mask, dropout, is_causal
         )

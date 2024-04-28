@@ -1,3 +1,6 @@
+"""
+    Attention Utils Definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -33,18 +36,18 @@ def get_extended_attention_mask(attention_mask: Tensor) -> Tensor:
         # [batch_size, num_heads, seq_length, seq_length] for padding case)
         extended_attention_mask = attention_mask
     elif attention_mask.dim() == 3:
-        # We can provide a self-attention mask of dimensions [batch_size, query_seq_length, key_seq_length]
+        # We can provide a self-attention mask of dimensions
+        # [batch_size, query_seq_length, key_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads,
         # [batch_size, num_heads, query_seq_length, key_seq_length].
         extended_attention_mask = attention_mask[:, None, :, :]
     elif attention_mask.dim() == 2:
         # Provided a padding mask of dimensions [batch_size, seq_length]
-        # if the model is an encoder, make the mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
+        # if the model is an encoder, make the mask broadcastable to
+        # [batch_size, num_heads, seq_length, seq_length]
         extended_attention_mask = attention_mask[:, None, None, :]
     else:
-        raise ValueError(
-            "Wrong shape for attention_mask (shape {})".format(attention_mask.shape)
-        )
+        raise ValueError(f"Wrong shape for attention_mask (shape {attention_mask.shape})")
 
     extended_attention_mask = extended_attention_mask.to(
         dtype=attention_mask.dtype

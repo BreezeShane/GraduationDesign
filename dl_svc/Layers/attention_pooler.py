@@ -1,3 +1,6 @@
+"""
+    Attention Pooler Definition.
+"""
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -8,9 +11,7 @@ from typing import List
 
 import torch
 from torch import nn, Tensor
-from .multi_head_attention import (
-    MultiHeadAttentionWithCache,
-)
+from dl_svc.Layers.multi_head_attention import MultiHeadAttentionWithCache
 
 
 class AttentionPooler(nn.Module):
