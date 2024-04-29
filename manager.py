@@ -101,10 +101,12 @@ if __name__ == '__main__':
     # -------------------------------------------------------------------- #
     train_group_parser.add_argument('--tset', type=str, required=True,
         help="The path to train dataset folder for loading.")
+    train_group_parser.add_argument('--text', type=str, required=True,
+        help="The path to folder containing species dictionary for train dataset.")
     train_group_parser.add_argument('--vset', type=str, required=True,
         help=
         "The path to validate dataset folder for loading. And enable to validate while training.")
-    train_group_parser.add_argument('--network', dest='model_type', type=str, default='large',
+    train_group_parser.add_argument('--network', dest='model_type', type=str, default='custom',
         choices=['base', 'large', 'custom'],
         help="Toggle the size mode of network.")
     train_group_parser.add_argument('--device', '-d',
