@@ -34,24 +34,22 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
       email: values.email
     }).then(function (response) {
       console.log(response);
-      messageClient.info({
+      messageClient.success({
         message: `Success to sign up a new account!`,
         description: "Now you can go to sign in using this account!",
         placement: 'topLeft',
         duration: 2,
-        type: 'success'
       });
       ChangeState();
       setOpen(false);
     })
     .catch(function (error) {
         console.log(error);
-        messageClient.info({
+        messageClient.success({
           message: `Failed to sign up a new account!`,
           description: "Please check your inputs!",
           placement: 'topLeft',
           duration: 2,
-          type: 'success'
         });
     });
     

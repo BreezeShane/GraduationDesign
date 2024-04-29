@@ -12,9 +12,8 @@ export type SignStatusProperty = {
   messageClient: NotificationInstance
 }
 
-const NavBar: React.FC = () => {
-  const [api, contextHolder] = notification.useNotification();
-
+const NavBar: React.FC<{messageClient: NotificationInstance}> = (props) => {
+  const { messageClient } = props;
   const [signStatus, setSignStatus] = useState(sessionStorage.getItem('token')? true : false);
   
   const changeStatus = useCallback((signStatus: boolean) => {
@@ -28,10 +27,9 @@ const NavBar: React.FC = () => {
       alignItems: 'center',
       height: "100%"
     }}>
-        {contextHolder}
-        <SignOutButton isVisible={signStatus} signStatus={signStatus} changeStatus={changeStatus} messageClient={api} />
-        <SignUpButton isVisible={!signStatus} signStatus={signStatus} changeStatus={changeStatus} messageClient={api} />
-        <SignInButton isVisible={!signStatus} signStatus={signStatus} changeStatus={changeStatus} messageClient={api} />
+        <SignOutButton isVisible={signStatus} signStatus={signStatus} changeStatus={changeStatus} messageClient={messageClient} />
+        <SignUpButton isVisible={!signStatus} signStatus={signStatus} changeStatus={changeStatus} messageClient={messageClient} />
+        <SignInButton isVisible={!signStatus} signStatus={signStatus} changeStatus={changeStatus} messageClient={messageClient} />
     </div>
   );
 

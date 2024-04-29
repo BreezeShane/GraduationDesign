@@ -1,8 +1,8 @@
 'use client';
 import axios from 'axios';
-import { Layout, Card, Upload } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Layout, notification } from 'antd';
 import NavBar from './Componets/NavBar';
+import ContentPanel from '@/app/Componets/ContentPanel';
 
 const { Header, Footer, Sider, Content } = Layout;
 
@@ -23,68 +23,37 @@ const headerStyle: React.CSSProperties = {
   borderColor: "#BDC0BA"
 };
 
-const contentStyle: React.CSSProperties = {
-  display: 'flex',
-  textAlign: 'center',
-  height: '80%',
-  position: "absolute", 
-  width: "100%", 
-  left: 0, 
-  top: '11%',
-  // minHeight: 120,
-  // lineHeight: '120px',
-  // color: '#fff',
-  // backgroundColor: '#0958d9',
-  backgroundColor: '#ffffff',
-};
-
-const siderStyle: React.CSSProperties = {
-  textAlign: 'center',
-  lineHeight: '120px',
-  color: '#fff',
-  display: 'none',
-  backgroundColor: '#1677ff',
+const layoutStyle: React.CSSProperties = {
+  height: "79%",
+  backgroundColor: "#ffffff",
 };
 
 const footerStyle: React.CSSProperties = {
   textAlign: 'center',
-  position: "absolute", 
-  width: "100%", 
-  left: 0, 
+  position: "absolute",
+  width: "100%",
+  left: 0,
   top: '90%',
   color: '#fff',
   backgroundColor: '#4096ff',
 };
 
 export default function Home() {
+  let token = sessionStorage.getItem('token');
+  let useremail = sessionStorage.getItem('useremail');
+  if (token && useremail){
+    axios.defaults.headers.common['Authorization'] = token;
+  }
+  const [messageClient, contextHolder] = notification.useNotification();
   return (
     <main style={{height:"100%", position:"absolute", width:"100%", left:0, top:0}}>
+      {contextHolder}
       <Header style={headerStyle}>
-        <NavBar/>
+        <NavBar messageClient={messageClient}/>
       </Header>
-      <Layout>
-          <Sider width="25%" style={siderStyle}>
-              Sider
-          </Sider>
-          <Content style={contentStyle}>
-            <div style={{width: '50%'}}>
-              <Card title='图片上传'>
-                <Upload listType='picture'>
-                  <PlusOutlined />
-                  <div style={{ marginTop: 8, color: '#666' }}>Upload Images</div>
-                </Upload>
-              </Card>
-            </div>
-            <div>
-              <p>
-                <a>123</a>
-              </p>
-              <p>
-                Content
-              </p>
-            </div>
-          </Content>
-      </Layout>
+      <div style={layoutStyle}>
+          <ContentPanel messageClient={messageClient} />
+      </div>
       <Footer style={footerStyle}>Footer</Footer>
     </main>
   );

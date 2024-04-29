@@ -1,6 +1,13 @@
-import { isString } from "antd/es/button";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import { UserSessionInfo } from "./Types";
+
+const saveSessionUserInfo = (props: UserSessionInfo) => {
+    const { useremail } = props;
+    if (useremail) {
+        sessionStorage.setItem('useremail', useremail);
+    }
+};
 
 const setAuthToken = (token: string | undefined) => {
     if(token){
@@ -20,4 +27,4 @@ const parseAuthToken = (token: string) => {
     }
 }
 
-export { setAuthToken };
+export { setAuthToken, parseAuthToken, saveSessionUserInfo };

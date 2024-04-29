@@ -16,12 +16,11 @@ const SignOutButton: React.FC<SignStatusProperty> = (props) => {
         sessionStorage.clear();
         setAuthToken(undefined);
         console.log("Message should be open!")
-        messageClient.info({
+        messageClient.success({
             message: `Success to sign out!`,
             description: "Now you should sign in to use the insect identifier system!",
             placement: 'topLeft',
             duration: 2,
-            type: 'success'
           });
         ChangeState();
         setOpen(false);

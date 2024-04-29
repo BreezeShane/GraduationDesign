@@ -1,10 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import type { FormProps } from 'antd';
-import { Button, Form, Input, Modal, notification } from 'antd';
+import { Button, Form, Input, Modal } from 'antd';
 import { LoginOutlined, UserOutlined, KeyOutlined } from '@ant-design/icons';
-import { setAuthToken } from '@/app/Utils';
+import { saveSessionUserInfo, setAuthToken } from '@/app/Utils';
 import axios from 'axios';
-import { sign } from 'crypto';
 import type { SignStatusProperty } from '../NavBar';
 
 type FieldType = {
@@ -25,15 +24,14 @@ const SignInButton: React.FC<SignStatusProperty> = (props) => {
   const showModal = () => {
     setOpen(true);
   };
-  
+
   const onFinish: FormProps<FieldType>['onFinish'] = (values) => {
     if (sessionStorage.getItem('token')) {
-      messageClient.info({
+      messageClient.error({
         message: `Forbidden Operation!`,
         description: "You have signed in!",
         placement: 'topLeft',
         duration: 2,
-        type: 'error'
       });
       setOpen(false);
       return;
@@ -43,28 +41,29 @@ const SignInButton: React.FC<SignStatusProperty> = (props) => {
       password: values.password
     }).then(function (response) {
       setAuthToken(JSON.stringify(response));
-      messageClient.info({
+      messageClient.success({
         message: `Success to sign in!`,
         description: "Now you can use the insect identifier system!",
         placement: 'topLeft',
         duration: 2,
-        type: 'success'
       });
+      saveSessionUserInfo({
+        useremail: values.useremail
+      })
       ChangeState();
       setOpen(false);
     })
     .catch(function (error) {
         console.log(error);
-        messageClient.info({
+        messageClient.error({
           message: `Failed to sign in!`,
           description: "Please check your user email or password!",
           placement: 'topLeft',
           duration: 2,
-          type: 'error'
         });
     });
   };
-  
+
   const onFinishFailed: FormProps<FieldType>['onFinishFailed'] = (errorInfo) => {
     console.log('Failed:', errorInfo);
   };
