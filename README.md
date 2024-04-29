@@ -6,7 +6,6 @@
 <code>Insect-Identifier
 ├── Cargo.lock
 ├── Cargo.toml
-├── datasets.db
 ├── dl_svc
 │   ├── COCA
 │   │   ├── coca_model.py
@@ -94,7 +93,7 @@
     │   └── server.rs
     └── user_manager.rs
 
-19 directories, 71 files</code>
+19 directories, 70 files</code>
 </pre>
 </details>
 
@@ -317,7 +316,7 @@ The command comes from `pytorch.org`, for more details, see: [INSTALLING PREVIOU
 
 #### Generate Dataset for COCA
 
-Because COCA need two input(Images and Text), so it's necessary to generate a new dataset from `Using Datasets` above. Run resule is below:
+Because COCA need two input(Images and Text), so it's necessary to generate a new dataset from `Using Datasets` above. The run result is below:
 
 ```shell
 ❯ python dl_svc/DataProcess/generate_dataset.py
