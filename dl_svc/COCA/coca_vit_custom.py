@@ -15,8 +15,8 @@ def coca_vit_custom():
             vision_n_layer=12,
             vision_n_head=12,
             # Required text args
-            vocab_size=49408,
-            num_text_positions=77,
+            vocab_size=102,
+            num_text_positions=102,
             text_hidden_dim=512,
             text_n_layer=12,
             text_n_head=8,
@@ -31,7 +31,7 @@ def coca_vit_custom():
             pooler_output_embed_dim=512,
             pooler_n_head=8,
             # Optional vision args
-            image_size=224,
+            image_size=512,
             num_channels=3,
             vision_activation=nn.GELU,
             vision_transformer_dropout=0.0,

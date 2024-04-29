@@ -14,7 +14,7 @@ class IP102Dataset(Dataset):
     """ The Dataset class used for IP102. """
     def __init__(self, dataset_path, data_label_file):
         self.transforms = transforms.Compose([
-            transforms.Resize((512,512)),        # Crop to (512,512) size.
+            transforms.Resize((224, 224)),        # Crop to (512,512) size.
             transforms.RandomRotation((30,150)), # Rotate 30°-150° randomly.
             transforms.RandomHorizontalFlip(0.6),# Flip horizontally with 0.6 probability.
             transforms.RandomVerticalFlip(0.4),  # Flip vertically with 0.4 probability.

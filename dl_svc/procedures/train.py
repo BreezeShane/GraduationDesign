@@ -13,7 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
 from peft import get_peft_model, LoraConfig, TaskType
 
-from dl_svc.datasetloader import load_dataset
+from dl_svc.DataProcess.datasetloader import load_dataset
 from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14
 from dl_svc.COCA.coca_vit_custom import coca_vit_custom
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
@@ -31,12 +31,9 @@ def setup_seed(seed):
 def train(args, carry_on=False):
     """ Train COCA Vit Model. """
     setup_seed(TRAIN_CFG.SEED)
-    if args.tset is None:
-        raise ValueError("The path to train dataset is needed!")
-    t_dataloader = load_dataset(args.tset, "train.txt", batch_size=TRAIN_CFG.BATCH_SIZE)
 
-    v_dataloader = load_dataset(args.vset, "val.txt",
-                                shuffle=False) if args.vset is not None else None
+    t_dataloader = load_dataset(args.tset, "train.txt", batch_size=TRAIN_CFG.BATCH_SIZE)
+    v_dataloader = load_dataset(args.vset, "val.txt", shuffle=False)
 
     match args.model_type:
         case 'large':
@@ -111,9 +108,9 @@ def train(args, carry_on=False):
         )
     writer = SummaryWriter(TENSORBOARD_DATA_PATH)
     #TB Print Model
-    rand_input = (torch.randn(1, 3, 256, 256), torch.randn(1, 1))
-    writer.add_graph(model, input_to_model=rand_input)
+    rand_input = (torch.randn(1, 3, 224, 224), torch.randn(1, 1))
     print(summary(model, rand_input, device="cpu"))
+    writer.add_graph(model, input_to_model=rand_input)
 
     train_epochs_loss = []
     valid_epochs_loss = []
