@@ -6,14 +6,19 @@
 <code>Insect-Identifier
 ├── Cargo.lock
 ├── Cargo.toml
+├── datasets.db
 ├── dl_svc
 │   ├── COCA
 │   │   ├── coca_model.py
+│   │   ├── coca_vit_custom.py
 │   │   ├── multimodal_decoder.py
 │   │   └── text_decoder.py
-│   ├── datasetloader.py
-│   ├── default
-│   │   └── cfg.ini
+│   ├── config.py
+│   ├── DataProcess
+│   │   ├── datasetloader.py
+│   │   ├── generate_dataset.py
+│   │   └── text_processor.py
+│   ├── ds_cfg.json
 │   ├── Encoder
 │   │   └── vision_transformer.py
 │   ├── Layers
@@ -38,25 +43,36 @@
 │       ├── distributed.py
 │       ├── early_stop.py
 │       └── file_io.py
-├── frontend_nextjs
+├── front_end
+│   ├── app
+│   │   ├── Componets
+│   │   │   ├── Buttons
+│   │   │   │   ├── SignInButton.tsx
+│   │   │   │   ├── SignOutButton.tsx
+│   │   │   │   └── SignUpButton.tsx
+│   │   │   ├── ContentPanel.tsx
+│   │   │   ├── NavBar.tsx
+│   │   │   └── UploadImage.tsx
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   ├── page.module.css
+│   │   ├── Pages
+│   │   │   ├── Common.tsx
+│   │   │   ├── ModelAdmin.tsx
+│   │   │   ├── UserAdmin.tsx
+│   │   │   └── UserInfo.tsx
+│   │   ├── page.tsx
+│   │   ├── Types.ts
+│   │   └── Utils.tsx
 │   ├── next.config.mjs
 │   ├── next-env.d.ts
 │   ├── package.json
 │   ├── package-lock.json
-│   ├── postcss.config.js
 │   ├── public
 │   │   ├── next.svg
 │   │   └── vercel.svg
 │   ├── README.md
-│   ├── src
-│   │   ├── app
-│   │   │   ├── api
-│   │   │   ├── favicon.ico
-│   │   │   ├── globals.css
-│   │   │   ├── layout.tsx
-│   │   │   └── page.tsx
-│   │   └── pages
-│   ├── tailwind.config.ts
 │   └── tsconfig.json
 ├── manager.py
 ├── README.md
@@ -77,8 +93,8 @@
     │   ├── client.rs
     │   └── server.rs
     └── user_manager.rs
-<br>
-19 directories, 55 files</code>
+
+19 directories, 71 files</code>
 </pre>
 </details>
 
@@ -124,16 +140,16 @@ The command comes from `pytorch.org`, for more details, see: [INSTALLING PREVIOU
 
     The IP102 dataset contains more than 75,000 images belongs to 102 categories. [Source](https://drive.google.com/drive/folders/1svFSy2Da3cVMvekBwe13mzyx38XZ9xWo?usp=sharing) The dataset contains 45,095 images in the training set, 7,508 images in the validation set, and 22,619 images in the testing set for classification task.
 <!-- 2. [Data Set of 120 Insect Species for Classification projects - kaggle](https://www.kaggle.com/discussions/general/164015)
-    
+
     It has 291 species of Insects using 63,364 images from the Natural History Museum London. [Source](https://zenodo.org/record/3549369#.XvI_jMfVLIU)
 3. [InsectBase: Soybean Crop Insect Raw Image Dataset_V1 with Bounding boxes for Classification and Localization](https://figshare.com/articles/dataset/Soybean_Crop_Insect_Raw_Image_Dataset_V1_with_bounding_boxes/13077221/4)
-    
+
     The dataset contains 4 catecories: Eocanthecona Bug, Tobacco Caterpillar, Red Hairy Catterpillar, Larva Spodoptera. It's a total of 3824 images.
 4. [Insect Village Synthetic Dataset - kaggle](https://www.kaggle.com/datasets/vencerlanz09/insect-village-synthetic-dataset?resource=download-directory&select=Insect+Classes)
-    
+
     The project use the dataset's folder `Insect Classes`, contains 1000 synthetic images for each insect class(10 categories and 10000 images in total).
 5. [Dangerous Farm Insects Dataset - kaggle](https://www.kaggle.com/datasets/tarundalal/dangerous-insects-dataset)
-    
+
     This dataset contains 15 classes that are regarded as the dangerous and harmful insects(Images total in 1578).
 6. [Insect Detect - insect classification dataset v2](https://zenodo.org/records/8325384)
 
@@ -296,6 +312,20 @@ The command comes from `pytorch.org`, for more details, see: [INSTALLING PREVIOU
     </tbody>
     </table>
     </details> -->
+
+### Data Process
+
+#### Generate Dataset for COCA
+
+Because COCA need two input(Images and Text), so it's necessary to generate a new dataset from `Using Datasets` above. Run resule is below:
+
+```shell
+❯ python dl_svc/DataProcess/generate_dataset.py
+100%|██████████████████████████████████████████████████████████████████████████████████| 45095/45095 [00:11<00:00, 3829.90it/s]
+100%|████████████████████████████████████████████████████████████████████████████████████| 7508/7508 [00:03<00:00, 2270.78it/s]
+100%|██████████████████████████████████████████████████████████████████████████████████| 22619/22619 [00:10<00:00, 2124.11it/s]
+
+```
 
 ### Models' Source [[Reference]](https://github.com/facebookresearch/multimodal)
 
