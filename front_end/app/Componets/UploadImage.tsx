@@ -3,6 +3,7 @@ import { InboxOutlined } from '@ant-design/icons';
 import type { GetProp, UploadFile, UploadProps } from 'antd';
 import { message, Upload } from 'antd';
 import axios from 'axios';
+import { UploadFileStatus } from 'antd/es/upload/interface';
 
 const { Dragger } = Upload;
 type FileType = Parameters<GetProp<UploadProps, 'beforeUpload'>>[0];
@@ -10,10 +11,12 @@ type FileType = Parameters<GetProp<UploadProps, 'beforeUpload'>>[0];
 // const UploadImage: React.FC<{useremail: string}> = (props) => {
 const UploadImage: React.FC<{ setFileName: Function }> = (props) => {
   const { setFileName } = props;
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   let properties: UploadProps = {
     name: 'file',
     multiple: true,
+    fileList: fileList,
     beforeUpload(file, FileList) {
       if (sessionStorage.getItem('useremail')) {
         setFileName(file);
@@ -25,28 +28,33 @@ const UploadImage: React.FC<{ setFileName: Function }> = (props) => {
       }
     },
     customRequest(options) {
-      const file_obj = options.file;
+      const { onSuccess, onError, file } = options;
       axios.post(`/${sessionStorage.getItem('useremail')}/upload_pic`, {
-        file: file_obj
+        file: file
       }, {
         headers:{
           'Content-Type': "multipart/form-data"
         }
-      }).then(function (response) {
-        console.log(response);
+      }).then(res => {
+        onSuccess!(file);
+        console.log(res);
+      })
+      .catch(err=>{
+        const error = new Error(err);
+        onError!(error);
       });
-
     },
     onChange(info) {
       const { status } = info.file;
-      if (status !== 'uploading') {
-        console.log(info.file, info.fileList);
-      }
       if (status === 'done') {
-        message.success(`${info.file.name} file uploaded successfully.`);
+        if (info.file.response.code === 200) {
+          message.success(`${info.file.name} file uploaded successfully.`);
+        }
       } else if (status === 'error') {
         message.error(`${info.file.name} file upload failed.`);
       }
+      // console.log(info.fileList);
+      setFileList([...info.fileList]);
     },
     onDrop(e) {
       console.log('Dropped files', e.dataTransfer.files);
