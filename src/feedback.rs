@@ -19,14 +19,14 @@ use crate::MultiState;
 
 #[derive(Serialize, Deserialize)]
 pub struct  RequestFeedback {
-    user_id: String,
-    pic_sublink: String,
+    useremail: String,
+    pic_name: String,
     real_label: Option<String>
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct AccRejFeedback {
-    user_id: String,
+    useremail: String,
     pic_path: String,
     real_label: String,
     accept: bool,
@@ -64,7 +64,7 @@ pub async fn handler_subm_fb(
     State(multi_state): State<MultiState>,
     Form(user_feedback): Form<RequestFeedback>
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    if !check_permission(&multi_state.db_pool, &user_feedback.user_id, Permission::Common).await.unwrap() {
+    if !check_permission(&multi_state.db_pool, &user_feedback.useremail, Permission::Common).await.unwrap() {
         return Err(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
@@ -75,17 +75,17 @@ pub async fn handler_subm_fb(
         let insert_statement;
         let pic_path = 
             PathBuf::from(
-                obtain_dir(&user_feedback.user_id)
+                obtain_dir(&user_feedback.useremail)
                 .unwrap()
             )
-                .join(user_feedback.pic_sublink).
+                .join(user_feedback.pic_name).
                 into_os_string().into_string().unwrap();
 
         match user_feedback.real_label {
             None => {
                 feedback = Feedback {
                     timestamp: Utc::now().timestamp(),
-                    from_user_email: user_feedback.user_id.clone(),
+                    from_user_email: user_feedback.useremail.clone(),
                     pic_path,
                     acceptable: false,
                     real_label: None,
@@ -100,7 +100,7 @@ pub async fn handler_subm_fb(
             Some(_) => {
                 feedback = Feedback {
                     timestamp: Utc::now().timestamp(),
-                    from_user_email: user_feedback.user_id.clone(),
+                    from_user_email: user_feedback.useremail.clone(),
                     deadline: Some(Utc::now().timestamp() + FEEDBACK_EXPIRATION),
                     pic_path,
                     real_label: user_feedback.real_label,
@@ -251,7 +251,7 @@ pub async fn handler_acc_rej_fb(
     State(multi_state): State<MultiState>,
     Form(acc_rej_fb): Form<AccRejFeedback>
 ) -> Result<(), (StatusCode, String)> {
-    if !check_permission(&multi_state.db_pool, &acc_rej_fb.user_id, Permission::MngFeedBack).await.unwrap() {
+    if !check_permission(&multi_state.db_pool, &acc_rej_fb.useremail, Permission::MngFeedBack).await.unwrap() {
         return Err(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
@@ -315,9 +315,9 @@ pub async fn handler_label_pic(
 
     let fb = Feedback {
         timestamp: Utc::now().timestamp(),
-        from_user_email: request_feedback.user_id,
+        from_user_email: request_feedback.useremail,
         deadline: Some(Utc::now().timestamp() + FEEDBACK_EXPIRATION),
-        pic_path: request_feedback.pic_sublink,
+        pic_path: request_feedback.pic_name,
         real_label: request_feedback.real_label,
         acceptable: false
     };

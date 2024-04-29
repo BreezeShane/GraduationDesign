@@ -1,7 +1,6 @@
 use axum::extract::State;
 use base64::{prelude::BASE64_URL_SAFE, Engine};
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::fs::create_dir;
 use axum::{
@@ -19,13 +18,6 @@ use crate::config::{USER_PIC_PATH, DATASETS_DIRECTORY};
 use crate::doc_database::{Dataset, DatasetTrait};
 use crate::MultiState;
 
-// use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
-#[derive(Serialize, Deserialize)]
-pub struct RequestUploadPic {
-    user_id: String   
-}
-
 pub fn obtain_dir(user_email: &String) -> Result<String, std::ffi::OsString>{
     let path_buffer = __obtain_dir(&user_email).unwrap();
     path_buffer.into_os_string().into_string()
@@ -39,10 +31,10 @@ fn __obtain_dir(user_email: &String) -> Result<PathBuf, String> {
     if !user_dir_path.exists() {
         match create_dir(&user_dir_path) {
             Ok(_) => {
-                println!("Directory initialized.");
+                tracing::info!("{:#?} Directory initialized.", user_dir_path);
             },
             Err(e) => {
-                println!("Error creating directory: {}", e);
+                tracing::error!("Error creating directory: {}", e);
                 return Err(format!("Error creating directory: {}", e));
             }
         }
@@ -52,20 +44,19 @@ fn __obtain_dir(user_email: &String) -> Result<PathBuf, String> {
 
 pub async fn handler_upload_pic(
     State(multi_state): State<MultiState>,
-    RoutePath(user): RoutePath<RequestUploadPic>, 
+    RoutePath(useremail): RoutePath<String>,
     mut multipart: Multipart
 )-> Result<(StatusCode, String), (StatusCode, String)> {
-    if !check_permission(&multi_state.db_pool, &user.user_id, Permission::Common).await.unwrap() {
+    if !check_permission(&multi_state.db_pool, &useremail, Permission::Common).await.unwrap() {
         return Err(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
-
     if let Some(file) = multipart.next_field().await.unwrap() {
         let filename = file.file_name().unwrap().to_string();
         let data = file.bytes().await.unwrap();
 
-        let file_path = __obtain_dir(&user.user_id).unwrap();
+        let file_path = __obtain_dir(&useremail).unwrap();
         let upload_path = file_path.join(&filename);
         //std::fs::write(&filename, &data).map_err(|err| err.to_string())?;
         tokio::fs::write(&upload_path, &data)
@@ -91,6 +82,8 @@ pub async fn handler_upload_dset(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
+    let tracing_request = format!("The received request is: \n{request:#?}");
+    tracing::warn!(tracing_request);
     let _ = stream_to_file(&file_name, request.into_body().into_data_stream()).await;
 
     let mut dataset_writer = multi_state.dset_db.lock().unwrap();

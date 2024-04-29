@@ -10,7 +10,7 @@ pub mod dl_svc;
 
 use std::{fs::copy, io, path::PathBuf, sync::{Arc, Mutex}};
 //use tokio::sync::Mutex;
-use authenticator::{handler_sign_in, handler_sign_out, handler_sign_up, middleware_authorize};
+use authenticator::{handler_sign_in, handler_sign_up, middleware_authorize};
 use chrono::{Local, Utc};
 use daemon::{Cronie, Daemon};
 use io_cache::{handler_upload_dset, handler_upload_pic};
@@ -88,7 +88,7 @@ async fn main() {
         // .with_writer(non_blocking)
         // .with_ansi(false)
         .event_format(format)
-        .init(); 
+        .init();
     // tracing_subscriber::registry()
     //     .with(
     //         tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
@@ -129,8 +129,8 @@ async fn main() {
         )
     };
     // build our application with a single route
-    
-    let app = Router::new() 
+
+    let app = Router::new()
     // .route("/:user_id/result", get())
         .route("/:user_id/upload_pic", post(handler_upload_pic))
         .route("/user/label_pic", get(handler_fetch_ufb).post(handler_label_pic))
@@ -139,20 +139,20 @@ async fn main() {
     // .route("/admin/:user_id/", get())
         .route("/admin/feedback_manage", get(handler_fetch_all_fb).post(handler_acc_rej_fb))
         .route("/admin/user_manage", post(handler_ban_or_unban_user))
-    
+
         .route("/admin/xch_dset_stat", post(handler_xch_dset_stat))
         .route("/admin/:user_id/dataset_manage/:file_name", post(handler_upload_dset))
         // .route("/admin/:user_id/training_panel", get())
         // .route("/admin/:user_id/model_backup", get())
         // .route("/admin/:user_id/training_effect", get())
 
-        .route("/sign_out/:user_id", get(handler_sign_out))
+        // .route("/sign_out/:user_id", get(handler_sign_out))
         .route_layer(middleware::from_fn(middleware_authorize))
         .route("/", get(|| async { "Hello, World!" }))
         .route("/sign_in", post(handler_sign_in))
         .route("/sign_up", post(handler_sign_up))
         .with_state(multi_state)
-        .layer(DefaultBodyLimit::max(1024))
+        .layer(DefaultBodyLimit::max(4 * 1024 * 1024)) // 4 * 1024 * 1024 bytes
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &Request<_>| {

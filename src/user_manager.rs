@@ -31,13 +31,13 @@ pub async fn handler_ban_or_unban_user(
                 (StatusCode::FORBIDDEN, "Not permitted!".to_string())
             );
         }
-        
+
         let client = multi_state.db_pool.get().await.unwrap();
         let query_statement = client
         .prepare("
             SELECT email, permissions, available FROM account WHERE email=$1;
         ").await.map_err(|err| (StatusCode::BAD_REQUEST, format!("Bad query! {}", err)))?;
-            
+
         let user_to_operate = client
             .query(&query_statement, &[&action_request.operated_user_email])
             .await
