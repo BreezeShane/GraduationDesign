@@ -73,7 +73,7 @@ pub async fn handler_subm_fb(
     let (feedback, insert_statement) = (|| -> (Feedback, &str) {
         let feedback;
         let insert_statement;
-        let pic_path = 
+        let pic_path =
             PathBuf::from(
                 obtain_dir(&user_feedback.useremail)
                 .unwrap()
@@ -189,17 +189,17 @@ pub async fn handler_subm_fb(
 
     let client = multi_state.db_pool.get().await.unwrap();
     let feedback_statement = client
-            .prepare(&insert_statement).await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?; 
+            .prepare(&insert_statement).await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
     let rows = client
     .execute(&feedback_statement, &params)
     .await
     .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
-    
+
     if rows < 1 {
         return Err((StatusCode::NOT_MODIFIED, "Insert feedback failed".to_string()));
     }
-    
+
     Ok((StatusCode::OK, "Succeed to submit the feedback!".to_string()))
 }
 
@@ -239,7 +239,7 @@ async fn _fetch_fb(pool: &Pool, trainable: bool) -> Vec<Feedback> {
     let vec_fb: Vec<Feedback> = client
         .query(&query_tfb_statement, &[])
         .await
-        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string())).unwrap() 
+        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string())).unwrap()
         .iter()
         .map(|row| Feedback::from_row_ref(row, trainable))
         .collect::<Vec<Feedback>>();
@@ -265,7 +265,7 @@ pub async fn handler_acc_rej_fb(
 
     let pic_path = acc_rej_fb.pic_path;
     let label = acc_rej_fb.real_label;
-    
+
     if acc_rej_fb.accept {
         let task = TrainingTask {
             pic_path: pic_path.clone(),
@@ -274,7 +274,7 @@ pub async fn handler_acc_rej_fb(
         let mut queue = multi_state.train_queue.lock().unwrap();
         let _ = queue.append_task(task);
     }
-    
+
     let row = client
         .execute(&del_statement, &[&pic_path])
         .await
@@ -335,9 +335,9 @@ pub async fn handler_label_pic(
     ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
     let insert_row = client
-            .execute(&insert_statement, 
+            .execute(&insert_statement,
                 &[
-                    &fb.timestamp, &fb.from_user_email, &fb.deadline, 
+                    &fb.timestamp, &fb.from_user_email, &fb.deadline,
                     &fb.pic_path, &fb.real_label, &fb.acceptable
                 ])
             .await
@@ -348,7 +348,7 @@ pub async fn handler_label_pic(
             return Err((StatusCode::NOT_MODIFIED, "Failed to insert new trainable feedback!".to_string()));
         }
         let delet_row = client
-        .execute(&del_statement, 
+        .execute(&del_statement,
             &[
                 &fb.pic_path
             ])

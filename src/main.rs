@@ -11,6 +11,7 @@ pub mod dl_svc;
 use std::{fs::copy, io, path::PathBuf, sync::{Arc, Mutex}};
 //use tokio::sync::Mutex;
 use authenticator::{handler_sign_in, handler_sign_up, middleware_authorize};
+use dl_svc::handler_infer;
 use chrono::{Local, Utc};
 use daemon::{Cronie, Daemon};
 use io_cache::{handler_upload_dset, handler_upload_pic};
@@ -135,6 +136,7 @@ async fn main() {
         .route("/:user_id/upload_pic", post(handler_upload_pic))
         .route("/user/label_pic", get(handler_fetch_ufb).post(handler_label_pic))
         .route("/user/subm_fb", post(handler_subm_fb))
+        .route("/user/infer", post(handler_infer))
 
     // .route("/admin/:user_id/", get())
         .route("/admin/feedback_manage", get(handler_fetch_all_fb).post(handler_acc_rej_fb))

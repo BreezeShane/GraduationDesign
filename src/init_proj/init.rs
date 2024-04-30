@@ -4,7 +4,7 @@ use postgres::{Client, NoTls, Error};
 
 fn main() -> Result<(), Error> {
     let mut cli = Client::connect("postgresql://postgres:postgres@localhost/insectsys", NoTls)?;
-    
+
     cli.batch_execute("
         CREATE TABLE IF NOT EXISTS Account (
             id              SERIAL,
@@ -23,9 +23,9 @@ fn main() -> Result<(), Error> {
     cli.batch_execute("
         CREATE TABLE IF NOT EXISTS TFeedback (
             id              SERIAL PRIMARY KEY,
-            time_stamp      TIMESTAMP NOT NULL,
-            from_user_email    VARCHAR NOT NULL,
-            time_out        TIMESTAMP NOT NULL,
+            time_stamp      BIGINT NOT NULL,
+            from_user_email VARCHAR NOT NULL,
+            time_out        BIGINT NOT NULL,
             pic_link        TEXT NOT NULL,
             real_label      VARCHAR NOT NULL,
             acceptable      BOOLEAN NOT NULL
@@ -37,8 +37,8 @@ fn main() -> Result<(), Error> {
     cli.batch_execute("
         CREATE TABLE IF NOT EXISTS UFeedback (
             id              SERIAL PRIMARY KEY,
-            time_stamp      TIMESTAMP NOT NULL,
-            from_user_email    VARCHAR NOT NULL,
+            time_stamp      BIGINT NOT NULL,
+            from_user_email VARCHAR NOT NULL,
             pic_link        TEXT NOT NULL,
             acceptable      BOOLEAN NOT NULL
         );
@@ -79,7 +79,6 @@ fn init_dir(vec_path: Vec<&str>) {
             }
         }
     }
-    
 }
 
 fn touch_file(path: &str) {
