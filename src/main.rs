@@ -27,7 +27,7 @@ use tokio_postgres::{Config, NoTls};
 use axum::{
     body::Bytes, extract::{DefaultBodyLimit, FromRef, MatchedPath}, http::{HeaderMap, Method, Request}, middleware, response::Response, routing::{get, post}, Router
 };
-use user_manager::handler_ban_or_unban_user;
+use user_manager::{handler_ban_or_unban_user, handler_user_info};
 use doc_database::{
     DatasetVec, DatasetTrait,
     Queue, QueueTrait
@@ -133,10 +133,11 @@ async fn main() {
 
     let app = Router::new()
     // .route("/:user_id/result", get())
-        .route("/:user_id/upload_pic", post(handler_upload_pic))
+        .route("/:useremail/upload_pic", post(handler_upload_pic))
         .route("/user/label_pic", get(handler_fetch_ufb).post(handler_label_pic))
         .route("/user/subm_fb", post(handler_subm_fb))
         .route("/user/infer", post(handler_infer))
+        .route("/user/info/:useremail", post(handler_user_info))
 
     // .route("/admin/:user_id/", get())
         .route("/admin/feedback_manage", get(handler_fetch_all_fb).post(handler_acc_rej_fb))

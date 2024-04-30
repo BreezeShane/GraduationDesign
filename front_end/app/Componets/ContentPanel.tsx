@@ -21,14 +21,14 @@ const ContentPanel: React.FC<{messageClient: NotificationInstance}> = (props) =>
   const { messageClient } = props;
   let Pages: Array<ContentPanelItem> = [
     generateItem("Main Page", "0", false, <Common messageClient={messageClient} />),
-    generateItem("User Info", "1", false, <UserInfo />),
+    generateItem("User Info", "1", false, <UserInfo messageClient={messageClient} />),
     generateItem("User Admin", "2", false, <UserAdmin />),
     generateItem("Model Admin", "3", false, <ModelAdmin />),
   ];
   return (
     <div>
       <Tabs
-        defaultActiveKey="1"
+        defaultActiveKey="0"
         tabPosition={"left"}
         style={{ height: "100%" }}
         items={Pages}

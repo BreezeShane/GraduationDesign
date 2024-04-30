@@ -2,9 +2,9 @@ use data_encoding::HEXUPPER;
 use serde::{Serialize, Deserialize};
 use std::{fs::{self, File}, io::{BufRead, BufReader, Write}, path::PathBuf};
 use crate::config::{
-    QUEUE_MAX_LENGTH, 
-    QUEUE_STORED_PATH, 
-    DATASETS_STORED_PATH, 
+    QUEUE_MAX_LENGTH,
+    QUEUE_STORED_PATH,
+    DATASETS_STORED_PATH,
 };
 
 
@@ -47,18 +47,18 @@ impl DatasetTrait for DatasetVec {
     fn load() -> DatasetVec {
         let file = File::open(DATASETS_STORED_PATH).unwrap();
         let buffered = BufReader::new(file);
-        
+
         let mut data_loaded = String::new();
         for data_stream in buffered.lines() {
             let line = data_stream.map_err(|err| err.to_string()).unwrap();
             data_loaded.push_str(line.as_str());
         }
-        
+
         let data_vec_decoded: Vec<u8> = match HEXUPPER.decode(data_loaded.as_bytes()) {
             Ok(data_vec) => data_vec,
             Err(_) => vec![]
         };
-        let data_string = 
+        let data_string =
             String::from_utf8(data_vec_decoded).unwrap();
         let dataset_vec = match serde_json::from_str(&data_string.as_str()) {
             Ok(data_json) => data_json,
@@ -85,7 +85,7 @@ impl DatasetTrait for DatasetVec {
             }
         }
     }
-    
+
     fn rm_dset(&mut self, dataset_name: &str) -> Result<(), String> {
         let index_opt = self.srch(dataset_name);
         match index_opt {
@@ -100,14 +100,11 @@ impl DatasetTrait for DatasetVec {
                 }
             }
         }
-        
-        
-        
     }
 }
 
 /// Datasets ⮥
-/// 
+///
 /// Training Queue ↴
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -184,7 +181,7 @@ impl QueueTrait for Queue {
     fn load() -> Queue {
         let file = File::open(QUEUE_STORED_PATH).unwrap();
         let buffered = BufReader::new(file);
-    
+
         let mut data_loaded = String::new();
         for data_stream in buffered.lines() {
             let line = data_stream.map_err(|err| err.to_string()).unwrap();
@@ -195,9 +192,9 @@ impl QueueTrait for Queue {
             Ok(data_vec) => data_vec,
             Err(_) => vec![]
         };
-        let data_string = 
+        let data_string =
             String::from_utf8(data_vec_decoded).unwrap();
-        
+
         let queue = match serde_json::from_str(&data_string.as_str()) {
             Ok(data_json) => data_json,
             Err(_) => Queue::init_queue()

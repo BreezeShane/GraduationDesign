@@ -22,7 +22,7 @@ pub async fn handler_xch_dset_stat(
     let mut dataset_manager = multi_state.dset_db.lock().unwrap();
     let result = dataset_manager.xch_stat(&request.dataset_name)
     .map_err(|err| (StatusCode::NOT_MODIFIED, err));
-    
+
     match result {
         Ok(_) => return Ok(()),
         Err(err) => return Err(err)

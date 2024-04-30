@@ -53,16 +53,25 @@ macro_rules! back_to_enum {
 }
 
 back_to_enum! {
-    #[derive(Debug)]
     /// Manage_Feedback Manage_User Manage_Model Train&Upload_Model&View_Training_Effect Common
     /// 0/1             0/1         0/1          0/1                                     0/1
     /// Permission: Enum
     /// Permission::<Role>: isize
     /// Each bit means status of the matched permission.
+    #[derive(Serialize, Deserialize, Debug)]
     pub enum Role {
         UserAdmin   =   0b11001isize,
         ModelAdmin  =   0b00111isize,
         CommonUser  =   0b00001isize,
+    }
+}
+
+pub fn role_to_string(permissions: i16) -> String {
+    let role: Role = permissions.try_into().unwrap();
+    return match role {
+        Role::UserAdmin => "User Administrator".to_string(),
+        Role::CommonUser => "Common User".to_string(),
+        Role::ModelAdmin => "Model Administrator".to_string()
     }
 }
 

@@ -72,16 +72,16 @@ impl Cronie for Daemon {
             let rt = &timer.runtime;
             let duration = timer.duration;
             let task = &timer.task;
-            
+
             let _ = rt.block_on(async {
                 // let start = Instant::now();
                 let dur = Duration::from_secs(duration);
                 let mut intv = interval(dur);
                 intv.set_missed_tick_behavior(MissedTickBehavior::Delay);
-    
+
                 intv.tick().await;
                 let status = task();
-                
+
                 if let Err(e) = status {
                     return Err(e);
                 }
