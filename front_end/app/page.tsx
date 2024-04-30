@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Layout, notification } from 'antd';
 import NavBar from './Componets/NavBar';
 import ContentPanel from '@/app/Componets/ContentPanel';
+import { useEffect } from 'react';
 
 const { Header, Footer, Sider, Content } = Layout;
 
@@ -39,12 +40,14 @@ const footerStyle: React.CSSProperties = {
 };
 
 export default function Home() {
-  let token = sessionStorage.getItem('token');
-  let useremail = sessionStorage.getItem('useremail');
-  if (token && useremail){
-    axios.defaults.headers.common['Authorization'] = token;
-  }
   const [messageClient, contextHolder] = notification.useNotification();
+  useEffect(() => {
+    let token = sessionStorage.getItem('token');
+    let useremail = sessionStorage.getItem('useremail')
+    if ( token && useremail ){
+      axios.defaults.headers.common['Authorization'] = token;
+    }
+  }, [])
   return (
     <main style={{height:"100%", position:"absolute", width:"100%", left:0, top:0}}>
       {contextHolder}

@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import { InboxOutlined } from '@ant-design/icons';
-import type { GetProp, UploadFile, UploadProps } from 'antd';
-import { message, Upload } from 'antd';
+import type { UploadFile, UploadProps } from 'antd';
+import { Button, message, Upload } from 'antd';
 import axios from 'axios';
-import { UploadFileStatus } from 'antd/es/upload/interface';
+import { NotificationInstance } from 'antd/es/notification/interface';
 
 const { Dragger } = Upload;
-type FileType = Parameters<GetProp<UploadProps, 'beforeUpload'>>[0];
 
 // const UploadImage: React.FC<{useremail: string}> = (props) => {
-const UploadImage: React.FC<{ setFileName: Function }> = (props) => {
-  const { setFileName } = props;
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
+const UploadImage: React.FC<{ messageClient: NotificationInstance, fileList: UploadFile[], setFileList: Function }> = (props) => {
+  const { messageClient, fileList, setFileList } = props;
 
   let properties: UploadProps = {
     name: 'file',
@@ -19,16 +17,19 @@ const UploadImage: React.FC<{ setFileName: Function }> = (props) => {
     fileList: fileList,
     beforeUpload(file, FileList) {
       if (sessionStorage.getItem('useremail')) {
-        setFileName(file);
         return true;
       } else {
-        message.error("You should sign in first!");
-        setFileName("");
+        messageClient.error({
+          message: `Forbidden Operation!`,
+          description: "You should sign in first!",
+          placement: 'topLeft',
+          duration: 2,
+        });
         return false;
       }
     },
     customRequest(options) {
-      const { onSuccess, onError, file } = options;
+      const { onSuccess, onError, file, filename } = options;
       axios.post(`/${sessionStorage.getItem('useremail')}/upload_pic`, {
         file: file
       }, {
@@ -48,16 +49,32 @@ const UploadImage: React.FC<{ setFileName: Function }> = (props) => {
       const { status } = info.file;
       if (status === 'done') {
         if (info.file.response.code === 200) {
-          message.success(`${info.file.name} file uploaded successfully.`);
+          messageClient.success({
+            message: `Uploading Succeeded`,
+            description: `The image named ${info.file.name} has been uploaded.`,
+            placement: 'topLeft',
+            duration: 2,
+          });
         }
       } else if (status === 'error') {
-        message.error(`${info.file.name} file upload failed.`);
+        messageClient.error({
+          message: `Upload Failed`,
+          description: `The image named ${info.file.name} was failed to be uploaded. Please try it again later!`,
+          placement: 'topLeft',
+          duration: 2,
+        });
       }
       // console.log(info.fileList);
       setFileList([...info.fileList]);
     },
     onDrop(e) {
-      console.log('Dropped files', e.dataTransfer.files);
+      console.log('Catched dropped files', e.dataTransfer.files);
+    },
+    onRemove(file) {
+      let file_list = fileList.filter((item, index, array)=>{
+        return item.name != file.name;
+      })
+      setFileList([...file_list]);
     },
   };
 

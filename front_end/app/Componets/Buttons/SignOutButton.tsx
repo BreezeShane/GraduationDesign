@@ -15,7 +15,6 @@ const SignOutButton: React.FC<SignStatusProperty> = (props) => {
     const handleOk = () => {
         sessionStorage.clear();
         setAuthToken(undefined);
-        console.log("Message should be open!")
         messageClient.success({
             message: `Success to sign out!`,
             description: "Now you should sign in to use the insect identifier system!",

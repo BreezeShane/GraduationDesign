@@ -25,7 +25,7 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
   const showModal = () => {
     setOpen(true);
   };
-  
+
   const onFinish: FormProps<FieldType>['onFinish'] = (values) => {
     axios.post('/sign_up', {
       username: values.username,
@@ -33,7 +33,6 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
       repassword: values.repassword,
       email: values.email
     }).then(function (response) {
-      console.log(response);
       messageClient.success({
         message: `Success to sign up a new account!`,
         description: "Now you can go to sign in using this account!",
@@ -52,9 +51,9 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
           duration: 2,
         });
     });
-    
+
   };
-  
+
   const onFinishFailed: FormProps<FieldType>['onFinishFailed'] = (errorInfo) => {
     console.log('Failed:', errorInfo);
   };
@@ -133,7 +132,7 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
           >
             <Input.Password size="large" placeholder="Confirm Password" prefix={<KeyOutlined />} />
           </Form.Item>
-          
+
 
           <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
             <Button type="primary" htmlType="submit">

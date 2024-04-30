@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { notification } from 'antd';
 import SignInButton from './Buttons/SignInButton';
 import SignUpButton from './Buttons/SignUpButton';
@@ -14,8 +14,12 @@ export type SignStatusProperty = {
 
 const NavBar: React.FC<{messageClient: NotificationInstance}> = (props) => {
   const { messageClient } = props;
-  const [signStatus, setSignStatus] = useState(sessionStorage.getItem('token')? true : false);
-  
+  const [signStatus, setSignStatus] = useState(false);
+
+  useEffect(() => {
+    setSignStatus(sessionStorage.getItem('token')? true : false);
+  }, [])
+
   const changeStatus = useCallback((signStatus: boolean) => {
     setSignStatus(signStatus);
   }, []);
