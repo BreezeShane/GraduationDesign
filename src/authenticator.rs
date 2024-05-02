@@ -1,7 +1,8 @@
 use std::env;
 use std::ops::BitAnd;
+use axum::extract::Path;
 use sha2::Sha384;
-use chrono::{TimeZone, Utc};
+use chrono::{TimeZone, Local};
 use deadpool_postgres::Pool;
 use hmac::{digest::KeyInit, Hmac};
 use serde::{Deserialize, Serialize};
@@ -63,6 +64,7 @@ back_to_enum! {
         UserAdmin   =   0b11001isize,
         ModelAdmin  =   0b00111isize,
         CommonUser  =   0b00001isize,
+        Temp        =   0b11111isize, // onDebug
     }
 }
 
@@ -71,7 +73,8 @@ pub fn role_to_string(permissions: i16) -> String {
     return match role {
         Role::UserAdmin => "User Administrator".to_string(),
         Role::CommonUser => "Common User".to_string(),
-        Role::ModelAdmin => "Model Administrator".to_string()
+        Role::ModelAdmin => "Model Administrator".to_string(),
+        Role::Temp => "Temp".to_string(), // onDebug
     }
 }
 
@@ -198,8 +201,8 @@ pub fn verify_jwt(token: &String) -> Result<Claims, Error> {
         Ok(token) => {
             let claims: Claims = token.claims().clone();
             let expiry =
-                Utc.timestamp_opt(claims.expire_on as i64, 0).unwrap();
-            let now = Utc::now();
+                Local.timestamp_opt(claims.expire_on as i64, 0).unwrap();
+            let now = Local::now();
             if now > expiry {
                 return Err(Error::InvalidSignature);
             }
@@ -255,7 +258,7 @@ pub async fn handler_sign_in(
         user_email: account.email,
         user_name: account.nick_name,
         // permissions: account.permissions,
-        expire_on: (Utc::now().timestamp() + JWT_EXPIRATION) as usize
+        expire_on: (Local::now().timestamp() + JWT_EXPIRATION) as usize
     };
 
     let token = generate_jwt(claims).unwrap();
@@ -404,4 +407,29 @@ fn password_authentificate(password_string: String, salt_string: String, pbkdf2_
         Ok(_) => true,
         Err(_) => false
     }
+}
+
+pub async fn handler_check_user_role(
+    State(multi_state): State<MultiState>,
+    Path(useremail): Path<String>
+) -> Result<String, (StatusCode, String)> {
+    let client = multi_state.db_pool.get().await.unwrap();
+
+    let query_statement = client
+    .prepare("
+        SELECT email, permissions, available FROM account WHERE email=$1;
+    ")
+    .await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+
+    let account = client
+    .query(&query_statement, &[&useremail])
+    .await
+    .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
+    .iter()
+    .map(|row| ProofAccount::from_row_ref(row).unwrap())
+    .collect::<Vec<ProofAccount>>()
+    .pop().unwrap();
+
+    let role = role_to_string(account.permissions);
+    return Ok(role);
 }
