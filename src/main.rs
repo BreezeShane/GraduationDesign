@@ -10,24 +10,22 @@ pub mod dl_svc;
 
 use std::{fs::copy, io, path::PathBuf, sync::{Arc, Mutex}};
 //use tokio::sync::Mutex;
-use authenticator::{handler_sign_in, handler_sign_up, middleware_authorize};
+use authenticator::{handler_sign_in, handler_sign_up, middleware_authorize, handler_transfer_permission_to_role};
 use dl_svc::handler_infer;
-use chrono::{Local, Utc};
+use chrono::Local;
 use daemon::{Cronie, Daemon};
-use io_cache::{handler_upload_dset, handler_upload_pic};
+use io_cache::handler_upload_pic;
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use feedback::{handler_acc_rej_fb, handler_fetch_all_fb, handler_fetch_ufb, handler_label_pic, handler_subm_fb};
-use model_manager::handler_xch_dset_stat;
+use model_manager::handler_fetch_all_models;
 use postgres::Client;
 use std::fs::read_dir;
-// use tracing::Level;
-// use tower_http::trace::{self, TraceLayer};
 use tower_http::{trace::TraceLayer, cors::{CorsLayer, Any}};
 use tokio_postgres::{Config, NoTls};
 use axum::{
     body::Bytes, extract::{DefaultBodyLimit, FromRef, MatchedPath}, http::{HeaderMap, Method, Request}, middleware, response::Response, routing::{get, post}, Router
 };
-use user_manager::{handler_ban_or_unban_user, handler_user_info};
+use user_manager::{handler_suspend_or_unsuspend_user, handler_user_info};
 use doc_database::{
     DatasetVec, DatasetTrait,
     Queue, QueueTrait
@@ -38,7 +36,7 @@ use tower_http::classify::ServerErrorsFailureClass;
 use tracing::{info, info_span, Level, Span};
 use tracing_subscriber::fmt::{format::Writer, time::FormatTime};
 
-use crate::config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH};
+use crate::{config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH}, dl_svc::handler_authenticate_ssh, model_manager::handler_file_operation, user_manager::handler_fetch_all_users};
 
 // use axum_macros::debug_handler; // Important!
 
@@ -132,24 +130,18 @@ async fn main() {
     // build our application with a single route
 
     let app = Router::new()
-    // .route("/:user_id/result", get())
+        .route("/user/info/:useremail", post(handler_user_info))
+        .route("/user/check_role/:useremail", get(handler_transfer_permission_to_role))
         .route("/:useremail/upload_pic", post(handler_upload_pic))
-        .route("/user/label_pic", get(handler_fetch_ufb).post(handler_label_pic))
         .route("/user/subm_fb", post(handler_subm_fb))
         .route("/user/infer", post(handler_infer))
-        .route("/user/info/:useremail", post(handler_user_info))
+        .route("/user/label_pic", get(handler_fetch_ufb).post(handler_label_pic))
 
-    // .route("/admin/:user_id/", get())
         .route("/admin/feedback_manage", get(handler_fetch_all_fb).post(handler_acc_rej_fb))
-        .route("/admin/user_manage", post(handler_ban_or_unban_user))
-
-        .route("/admin/xch_dset_stat", post(handler_xch_dset_stat))
-        .route("/admin/:user_id/dataset_manage/:file_name", post(handler_upload_dset))
-        // .route("/admin/:user_id/training_panel", get())
-        // .route("/admin/:user_id/model_backup", get())
-        // .route("/admin/:user_id/training_effect", get())
-
-        // .route("/sign_out/:user_id", get(handler_sign_out))
+        .route("/admin/user_manage", get(handler_fetch_all_users).post(handler_suspend_or_unsuspend_user))
+        .route("/admin/model_manage", get(handler_fetch_all_models).post(handler_file_operation))
+        // .route("/admin/:user_id/dataset_manage/:file_name", post(handler_upload_dset))
+        .route("/admin/authenticate_ssh/:useremail", post(handler_authenticate_ssh))
         .route_layer(middleware::from_fn(middleware_authorize))
         .route("/", get(|| async { "Hello, World!" }))
         .route("/sign_in", post(handler_sign_in))
@@ -173,25 +165,25 @@ async fn main() {
                     )
                 })
                 .on_request(|_request: &Request<_>, _span: &Span| {
-                    tracing::debug!("The request body is {:?}, during time {:?}", _request, _span);
+                    tracing::debug!("The request body is {:#?}, during time {:#?}", _request, _span);
                     // You can use `_span.record("some_other_field", value)` in one of these
                     // closures to attach a value to the initially empty field in the info_span
                     // created above.
                 })
                 .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
-                    tracing::debug!("The response is {:?}, during time {:?}, the latency={:?}", _response, _span, _latency);
+                    tracing::debug!("The response is {:#?}, during time {:#?}, the latency={:#?}", _response, _span, _latency);
                 })
                 .on_body_chunk(|_chunk: &Bytes, _latency: Duration, _span: &Span| {
-                    tracing::debug!("The chunk is {:?}, during time {:?}, the latency={:?}", _chunk, _span, _latency);
+                    tracing::debug!("The chunk is {:#?}, during time {:#?}, the latency={:#?}", _chunk, _span, _latency);
                 })
                 .on_eos(
                     |_trailers: Option<&HeaderMap>, _stream_duration: Duration, _span: &Span| {
-                        tracing::debug!("The trailers are {:?}, during time {:?}, the stream duration={:?}", _trailers, _span, _stream_duration);
+                        tracing::debug!("The trailers are {:#?}, during time {:#?}, the stream duration={:#?}", _trailers, _span, _stream_duration);
                     },
                 )
                 .on_failure(
                     |_error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
-                        tracing::debug!("The error info is {:?}, during time {:?}, the latency={:?}", _error, _span, _latency);
+                        tracing::debug!("The error info is {:#?}, during time {:#?}, the latency={:#?}", _error, _span, _latency);
                     },
                 ),
         ).layer(cors_layer);
@@ -214,7 +206,7 @@ async fn main() {
         let query_result = cli.query("
             SELECT id, time_out FROM TFeedback;
         ", &[]).unwrap();
-        let right_now = Utc::now().timestamp();
+        let right_now = Local::now().timestamp();
         for row in query_result {
             let row_id: i64 = row.get(0);
             let row_timeout: i64 = row.get(1);
