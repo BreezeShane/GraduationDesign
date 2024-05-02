@@ -3,8 +3,7 @@ import type { FormProps } from 'antd';
 import { Button, Form, Input, Modal, notification } from 'antd';
 import { PlusCircleOutlined, UserOutlined, KeyOutlined, MailOutlined } from '@ant-design/icons';
 import axios from 'axios';
-import type { SignStatusProperty } from '../NavBar';
-
+import { NotificationInstance } from 'antd/es/notification/interface';
 
 type FieldType = {
   username?: string;
@@ -12,6 +11,13 @@ type FieldType = {
   repassword?: string;
   email?: string;
 };
+
+type SignStatusProperty = {
+  isVisible: boolean,
+  signStatus: boolean,
+  changeStatus: Function,
+  messageClient: NotificationInstance
+}
 
 const SignUpButton: React.FC<SignStatusProperty> = (props) => {
   const [open, setOpen] = useState(false);

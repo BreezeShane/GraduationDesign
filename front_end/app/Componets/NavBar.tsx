@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { notification } from 'antd';
 import SignInButton from './Buttons/SignInButton';
 import SignUpButton from './Buttons/SignUpButton';
 import SignOutButton from './Buttons/SignOutButton';
@@ -12,9 +11,14 @@ export type SignStatusProperty = {
   messageClient: NotificationInstance
 }
 
-const NavBar: React.FC<{messageClient: NotificationInstance}> = (props) => {
-  const { messageClient } = props;
-  const [signStatus, setSignStatus] = useState(false);
+type GlobalState = {
+  signStatus: boolean,
+  setSignStatus: Function,
+  messageClient: NotificationInstance,
+}
+
+const NavBar: React.FC<GlobalState> = (props) => {
+  const { messageClient, signStatus, setSignStatus } = props;
 
   useEffect(() => {
     setSignStatus(sessionStorage.getItem('token')? true : false);

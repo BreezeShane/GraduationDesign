@@ -1,9 +1,12 @@
 'use client';
 import axios from 'axios';
-import { Layout, notification } from 'antd';
+import { Layout, Result, notification } from 'antd';
 import NavBar from './Componets/NavBar';
-import ContentPanel from '@/app/Componets/ContentPanel';
-import { useEffect } from 'react';
+import ContentPanel from '@/app/Pages/ContentPanel';
+import { useEffect, useState } from 'react';
+// import { Provider } from 'react-redux';
+// import { PersistGate } from 'redux-persist/integration/react';
+// import { store, persistor } from './Utils';
 
 const { Header, Footer, Sider, Content } = Layout;
 
@@ -25,7 +28,7 @@ const headerStyle: React.CSSProperties = {
 };
 
 const layoutStyle: React.CSSProperties = {
-  height: "79%",
+  height: "100%",
   backgroundColor: "#ffffff",
 };
 
@@ -41,6 +44,8 @@ const footerStyle: React.CSSProperties = {
 
 export default function Home() {
   const [messageClient, contextHolder] = notification.useNotification();
+  const [signStatus, setSignStatus] = useState(false);
+
   useEffect(() => {
     let token = sessionStorage.getItem('token');
     let useremail = sessionStorage.getItem('useremail')
@@ -49,15 +54,35 @@ export default function Home() {
     }
   }, [])
   return (
-    <main style={{height:"100%", position:"absolute", width:"100%", left:0, top:0}}>
-      {contextHolder}
-      <Header style={headerStyle}>
-        <NavBar messageClient={messageClient}/>
-      </Header>
-      <div style={layoutStyle}>
-          <ContentPanel messageClient={messageClient} />
-      </div>
-      <Footer style={footerStyle}>Footer</Footer>
-    </main>
+    // <Provider store={store}>
+      // <PersistGate loading={null} persistor={persistor}>
+        <main style={{height:"100%", position:"absolute", width:"100%", left:0, top:0}}>
+          {contextHolder}
+          <Header style={headerStyle}>
+            <NavBar messageClient={messageClient} signStatus={signStatus} setSignStatus={setSignStatus} />
+          </Header>
+          <div style={layoutStyle}>
+              {
+                !signStatus &&
+                <Result
+                  style={{
+                    position: "absolute",
+                    backgroundColor: "#ffffff",
+                    zIndex: 999,
+                    width: "100%",
+                    height: "100%"
+                  }}
+                  title="Please click Sign Up or Sign In Button to start up!"
+                />
+              }
+              {
+                signStatus &&
+                <ContentPanel signStatus={signStatus} messageClient={messageClient} />
+              }
+          </div>
+          {/* <Footer style={footerStyle}>Footer</Footer> */}
+        </main>
+      // </PersistGate>
+    // </Provider>
   );
 }

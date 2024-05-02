@@ -11,7 +11,7 @@ const SignOutButton: React.FC<SignStatusProperty> = (props) => {
     const ChangeState = useCallback(() => {
       changeStatus(!signStatus)
     },[changeStatus, signStatus])
-    
+
     const handleOk = () => {
         sessionStorage.clear();
         setAuthToken(undefined);
@@ -24,15 +24,15 @@ const SignOutButton: React.FC<SignStatusProperty> = (props) => {
         ChangeState();
         setOpen(false);
     }
-  
+
     const showModal = () => {
         setOpen(true);
     };
-  
+
     const handleCancel = () => {
         setOpen(false);
     };
-  
+
     return (
       <div style={{ width: 130, display: isVisible? "block" : "none" }}>
         <Button style={{ width: 125 }} type="primary" shape="round" icon={<LogoutOutlined />} size={'large'} onClick={showModal}>
@@ -48,5 +48,5 @@ const SignOutButton: React.FC<SignStatusProperty> = (props) => {
       </div>
     );
   };
-  
+
   export default SignOutButton;
