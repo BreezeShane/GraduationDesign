@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use axum::extract::Query;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
-use chrono::Utc;
+use chrono::Local;
 use axum::{extract::State, http::StatusCode, Form};
 use deadpool_postgres::Pool;
 use postgres::types::ToSql;
@@ -84,7 +84,7 @@ pub async fn handler_subm_fb(
         match user_feedback.real_label {
             None => {
                 feedback = Feedback {
-                    timestamp: Utc::now().timestamp(),
+                    timestamp: Local::now().timestamp(),
                     from_user_email: user_feedback.useremail.clone(),
                     pic_path,
                     acceptable: false,
@@ -99,9 +99,9 @@ pub async fn handler_subm_fb(
             },
             Some(_) => {
                 feedback = Feedback {
-                    timestamp: Utc::now().timestamp(),
+                    timestamp: Local::now().timestamp(),
                     from_user_email: user_feedback.useremail.clone(),
-                    deadline: Some(Utc::now().timestamp() + FEEDBACK_EXPIRATION),
+                    deadline: Some(Local::now().timestamp() + FEEDBACK_EXPIRATION),
                     pic_path,
                     real_label: user_feedback.real_label,
                     acceptable: false
@@ -141,7 +141,7 @@ pub async fn handler_subm_fb(
     //         match user_feedback.real_label {
     //             None => {
     //                 feedback = Feedback {
-    //                     timestamp: Utc::now().timestamp(),
+    //                     timestamp: Local::now().timestamp(),
     //                     from_user_email: user_feedback.from_user_email.clone(),
     //                     pic_path: user_feedback.pic_path.clone(),
     //                     acceptable: false,
@@ -162,9 +162,9 @@ pub async fn handler_subm_fb(
     //             },
     //             Some(_) => {
     //                 feedback = Feedback {
-    //                     timestamp: Utc::now().timestamp(),
+    //                     timestamp: Local::now().timestamp(),
     //                     from_user_email: current_user.email.clone(),
-    //                     deadline: Some(Utc::now().timestamp() + FEEDBACK_EXPIRATION),
+    //                     deadline: Some(Local::now().timestamp() + FEEDBACK_EXPIRATION),
     //                     pic_path: user_feedback.pic_path.clone(),
     //                     real_label: user_feedback.real_label,
     //                     acceptable: false
@@ -314,9 +314,9 @@ pub async fn handler_label_pic(
     }
 
     let fb = Feedback {
-        timestamp: Utc::now().timestamp(),
+        timestamp: Local::now().timestamp(),
         from_user_email: request_feedback.useremail,
-        deadline: Some(Utc::now().timestamp() + FEEDBACK_EXPIRATION),
+        deadline: Some(Local::now().timestamp() + FEEDBACK_EXPIRATION),
         pic_path: request_feedback.pic_name,
         real_label: request_feedback.real_label,
         acceptable: false
