@@ -2,6 +2,12 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { UserSessionInfo } from "./Types";
 
+// import {persistStore, persistReducer} from 'redux-persist';
+// import storage from 'redux-persist/lib/storage';
+// import { configureStore } from "@reduxjs/toolkit";
+// import { combineReducers } from 'redux'
+// import logger from 'redux-logger';
+
 const saveSessionUserInfo = (props: UserSessionInfo) => {
     const { useremail } = props;
     if (useremail) {
@@ -27,4 +33,20 @@ const parseAuthToken = (token: string) => {
     }
 }
 
+// // redux-persist
+// const persistConfig = {
+//     key: 'root',
+//     storage,
+// };
+// const allReducers = combineReducers({
+
+// });
+// const persistedReducer = persistReducer(persistConfig, allReducers);
+// const store = configureStore({
+//     reducer: persistedReducer,
+//     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(logger),
+// });
+// const persistor = persistStore(store);
+
+// export { setAuthToken, parseAuthToken, saveSessionUserInfo, store, persistor };
 export { setAuthToken, parseAuthToken, saveSessionUserInfo };
