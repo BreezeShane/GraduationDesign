@@ -409,7 +409,7 @@ fn password_authentificate(password_string: String, salt_string: String, pbkdf2_
     }
 }
 
-pub async fn handler_check_user_role(
+pub async fn handler_transfer_permission_to_role(
     State(multi_state): State<MultiState>,
     Path(useremail): Path<String>
 ) -> Result<String, (StatusCode, String)> {
