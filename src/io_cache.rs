@@ -1,21 +1,13 @@
 use axum::extract::State;
 use base64::{prelude::BASE64_URL_SAFE, Engine};
-use chrono::Utc;
 use std::path::{Path, PathBuf};
 use std::fs::create_dir;
 use axum::{
-    body::Bytes,
-    extract::{Multipart, Path as RoutePath, Request},
+    extract::{Multipart, Path as RoutePath},
     http::StatusCode,
-    BoxError,
 };
-use futures::{Stream, TryStreamExt};
-use std::io;
-use tokio::{fs::File, io::BufWriter};
-use tokio_util::io::StreamReader;
 use crate::authenticator::{check_permission, Permission};
-use crate::config::{USER_PIC_PATH, DATASETS_DIRECTORY};
-use crate::doc_database::{Dataset, DatasetTrait};
+use crate::config::USER_PIC_PATH;
 use crate::MultiState;
 
 pub fn obtain_dir(user_email: &String) -> Result<String, std::ffi::OsString>{
@@ -72,59 +64,59 @@ pub async fn handler_upload_pic(
     Err((StatusCode::NOT_ACCEPTABLE, "没有上传文件或上传文件不合法".to_string()))
 }
 
-pub async fn handler_upload_dset(
-    State(multi_state): State<MultiState>,
-    RoutePath((user_id, file_name)): RoutePath<(String, String)>,
-    request: Request,
-) -> Result<(), (StatusCode, String)> {
-    if !check_permission(&multi_state.db_pool, &user_id, Permission::MngModel).await.unwrap() {
-        return Err(
-            (StatusCode::FORBIDDEN, "Not permitted!".to_string())
-        );
-    }
-    let tracing_request = format!("The received request is: \n{request:#?}");
-    tracing::warn!(tracing_request);
-    let _ = stream_to_file(&file_name, request.into_body().into_data_stream()).await;
+// pub async fn handler_upload_dset(
+//     State(multi_state): State<MultiState>,
+//     RoutePath((user_id, file_name)): RoutePath<(String, String)>,
+//     request: Request,
+// ) -> Result<(), (StatusCode, String)> {
+//     if !check_permission(&multi_state.db_pool, &user_id, Permission::MngModel).await.unwrap() {
+//         return Err(
+//             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
+//         );
+//     }
+//     let tracing_request = format!("The received request is: \n{request:#?}");
+//     tracing::warn!(tracing_request);
+//     let _ = stream_to_file(&file_name, request.into_body().into_data_stream()).await;
 
-    let mut dataset_writer = multi_state.dset_db.lock().unwrap();
-    let dataset = Dataset {
-        name: file_name,
-        timestamp: Utc::now().timestamp(),
-        available: false
-    };
-    dataset_writer.append_dset(dataset).map_err(|_| (StatusCode::NOT_MODIFIED, "Failed to append dataset into Dataset Database!".to_string()))
-}
+//     let mut dataset_writer = multi_state.dset_db.lock().unwrap();
+//     let dataset = Dataset {
+//         name: file_name,
+//         timestamp: Local::now().timestamp(),
+//         available: false
+//     };
+//     dataset_writer.append_dset(dataset).map_err(|_| (StatusCode::NOT_MODIFIED, "Failed to append dataset into Dataset Database!".to_string()))
+// }
 
-async fn stream_to_file<S, E>(file_name: &str, stream: S) -> Result<(), (StatusCode, String)>
-where
-    S: Stream<Item = Result<Bytes, E>>,
-    E: Into<BoxError>,
-{
-    // To prevent directory traversal attack
-    if !path_is_valid(file_name) {
-        return Err((StatusCode::BAD_REQUEST, "Invalid path".to_owned()));
-    }
+// async fn stream_to_file<S, E>(file_name: &str, stream: S) -> Result<(), (StatusCode, String)>
+// where
+//     S: Stream<Item = Result<Bytes, E>>,
+//     E: Into<BoxError>,
+// {
+//     // To prevent directory traversal attack
+//     if !path_is_valid(file_name) {
+//         return Err((StatusCode::BAD_REQUEST, "Invalid path".to_owned()));
+//     }
 
-    async {
-        // Convert the stream into an `AsyncRead`.
-        let body_with_io_error = stream.map_err(|err| io::Error::new(io::ErrorKind::Other, err));
-        let body_reader = StreamReader::new(body_with_io_error);
-        futures::pin_mut!(body_reader);
+//     async {
+//         // Convert the stream into an `AsyncRead`.
+//         let body_with_io_error = stream.map_err(|err| io::Error::new(io::ErrorKind::Other, err));
+//         let body_reader = StreamReader::new(body_with_io_error);
+//         futures::pin_mut!(body_reader);
 
-        // Create the file. `File` implements `AsyncWrite`.
-        let path = Path::new(DATASETS_DIRECTORY).join(file_name);
-        let mut file = BufWriter::new(File::create(path).await?);
+//         // Create the file. `File` implements `AsyncWrite`.
+//         let path = Path::new(DATASETS_DIRECTORY).join(file_name);
+//         let mut file = BufWriter::new(File::create(path).await?);
 
-        // Copy the body into the file.
-        tokio::io::copy(&mut body_reader, &mut file).await?;
+//         // Copy the body into the file.
+//         tokio::io::copy(&mut body_reader, &mut file).await?;
 
-        Ok::<_, io::Error>(())
-    }
-    .await
-    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))
-}
+//         Ok::<_, io::Error>(())
+//     }
+//     .await
+//     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))
+// }
 
-fn path_is_valid(path: &str) -> bool {
+pub fn path_is_valid(path: &str) -> bool {
     let path = std::path::Path::new(path);
     let mut components = path.components().peekable();
 
