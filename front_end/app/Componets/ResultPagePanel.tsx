@@ -1,18 +1,16 @@
-import { Pagination, PaginationProps } from "antd";
+import { Pagination, PaginationProps, Typography } from "antd";
 import { useState, memo, useEffect } from "react";
-import { text } from "stream/consumers";
+
+const { Title, Paragraph, Text, Link } = Typography;
 
 const ResultPagePanel: React.FC<{ result_table: Object }> = memo((props) => {
     const { result_table } = props;
     const [results, setResults] = useState({});
     const [total, setTotal] = useState(0);
-
     const [current, setCurrent] = useState(0);
-    const [pageSize, setPageSize] = useState(10);
-
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
-    const [link, generateLink] = useState("Null");
+    const [link, generateLink] = useState<string | undefined>();
 
     const updatePanelbyIndex = (page_num: number, raw_table: Object) => {
         let idx = page_num - 1;
@@ -40,13 +38,14 @@ const ResultPagePanel: React.FC<{ result_table: Object }> = memo((props) => {
     };
     return (
         <div style={{ height: "80%" }}>
-            <div style={{ height: "10%" }}>
-                Click <a href={link}>{link}</a> For More Detalis.
-            </div>
 
-            <div style={{ height: "70%" }}>
-                <h1>{title}</h1>
-                <p>{content}</p>
+            <div style={{ height: "80%" }}>
+                <Title>{title}</Title>
+
+                <Paragraph>
+                    Click <a href={link}>{link}</a> For More Detalis.
+                </Paragraph>
+                <Paragraph>{content}</Paragraph>
             </div>
             <br />
             <Pagination
