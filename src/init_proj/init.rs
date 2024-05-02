@@ -48,7 +48,7 @@ fn main() -> Result<(), Error> {
     // init data source folder.
     const USER_PIC_PATH: &str = "./data_src/";
     const DATASETS_DIRECTORY: &str = "./datasets/";
-    const MODEL_STORED_PATH: &str = "./model/";
+    const MODEL_STORED_PATH: &str = "./models/";
     const MODEL_BACKUP_STORED_PATH: &str = "./.modbak/";
     let vec_path = vec![
         USER_PIC_PATH,
