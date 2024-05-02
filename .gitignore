@@ -3,6 +3,8 @@ queue.db
 datasets.db
 data_src/
 datasets/
+models/
+.modbak/
 
 ### Rust
 
