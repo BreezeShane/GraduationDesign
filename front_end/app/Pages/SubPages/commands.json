@@ -1,0 +1,10 @@
+{
+    "train": "python {project_root_path}/manager.py train --device 0 \n--tset \"{project_root_path}/datasets/IP102_v1.1/\" \n--vset \"{project_root_path}/datasets/IP102_v1.1/\" \n--save_model_path \"{project_root_path}/models\"",
+    "new_train": "python {project_root_path}/manager.py train --use_lora --use_deepspeed \n--device 0 \n--tset \"{project_root_path}/datasets/IP102_v1.1/\" \n--vset \"{project_root_path}/datasets/IP102_v1.1/\" \n--save_model_path \"{project_root_path}/models\"",
+    "infer": "python {project_root_path}/manager.py infer --gpu_id 0 --images {Path2ImagesFolder} \n--load_model_path {project_root_path}/models",
+    "valid": "python {project_root_path}/manager.py valid \n--gpu_id 0 \n--load_model_path {project_root_path}/models",
+    "compile": "python {project_root_path}/manager.py compile_model \n--tune_mode --enable_autoscheduler --target {Compilation Target} \n--model_path {project_root_path}/models/{YourPretrainedModel.pth} \n--save_package_path {Package Path Anywhere to Save}",
+    "list_target": "python {project_root_path}/manager.py list_targets",
+    "show_graphs": "python {project_root_path}/manager.py show_graphs",
+    "help": "python {project_root_path}/manager.py --help"
+ }

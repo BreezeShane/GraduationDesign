@@ -3,9 +3,9 @@ import { BookOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import React from 'react';
 import { NotificationInstance } from 'antd/es/notification/interface';
-import UploadImage from '../Componets/UploadImage';
+import UploadImage from '../../Componets/UploadImage';
 import axios from 'axios';
-import ResultPagePanel from '../Componets/ResultPagePanel';
+import ResultPagePanel from '../../Componets/ResultPagePanel';
 
 const Common: React.FC<{ messageClient: NotificationInstance }> = (props) => {
     const { messageClient } = props;
@@ -21,11 +21,12 @@ const Common: React.FC<{ messageClient: NotificationInstance }> = (props) => {
     const handleOk = () => {
         if (!sessionStorage.getItem('useremail') || fileList.length == 0) {
             messageClient.error({
-                message: `Forbidden Operation!`,
-                description: "You should sign in first and then upload at least one image file!",
+                message: `Failed to submit feedback!`,
+                description: "You should sign in first and upload at least one image file!",
                 placement: 'topLeft',
                 duration: 2,
             });
+            return;
         }
         let label_list = labelList.split(';');
         for (var index in fileList) {
@@ -46,14 +47,14 @@ const Common: React.FC<{ messageClient: NotificationInstance }> = (props) => {
             axios.post('/user/subm_fb', post_body)
             .then(function (res) {
                 messageClient.success({
-                    message: `Succeeded to Submit!`,
+                    message: `Succeeded to submit feedback!`,
                     description: `Thank you very much for your precious feedback! Returned response: ${res}`,
                     placement: 'topLeft',
                     duration: 2,
                 });
             }).catch((err) => {
                 messageClient.error({
-                    message: `Failed to Submit!`,
+                    message: `Failed to submit feedback!`,
                     description: `The feedback weren't sent(Error Responce: {${err}}), please try it again later! Thank you for your patience!`,
                     placement: 'topLeft',
                     duration: 2,
