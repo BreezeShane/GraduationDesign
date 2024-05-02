@@ -18,7 +18,7 @@ pub const FEEDBACK_EXPIRATION: i64 = 3600 * 24 * 7; // 7 days
 pub const TIMER_DURATION: u64 = 3600; // 1h
 
 // main.rs + model_manage.rs
-pub const MODEL_STORED_PATH: &str = "./model/";
+pub const MODEL_STORED_PATH: &str = "./models/";
 pub const MODEL_BACKUP_STORED_PATH: &str = "./.modbak/";
 
 // dl_svc.rs
