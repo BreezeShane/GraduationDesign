@@ -64,7 +64,7 @@ back_to_enum! {
         UserAdmin   =   0b11001isize,
         ModelAdmin  =   0b00111isize,
         CommonUser  =   0b00001isize,
-        Temp        =   0b11111isize, // onDebug
+        SuperRoot   =   0b11111isize,
     }
 }
 
@@ -74,7 +74,7 @@ pub fn role_to_string(permissions: i16) -> String {
         Role::UserAdmin => "User Administrator".to_string(),
         Role::CommonUser => "Common User".to_string(),
         Role::ModelAdmin => "Model Administrator".to_string(),
-        Role::Temp => "Temp".to_string(), // onDebug
+        Role::SuperRoot => "Super Root".to_string(),
     }
 }
 

@@ -18,7 +18,7 @@ enum Role {
   CommonUser,
   UserAdmin,
   ModelAdmin,
-  Temp // onDebug
+  SuperRoot // onDebug
 }
 
 const generateItem = (label: string, key: string, children: ReactNode) => {
@@ -39,7 +39,7 @@ const checkRole = (role: string) => {
     case "User Administrator": return Role.UserAdmin;
     case "Model Administrator": return Role.ModelAdmin;
     case "Common User": return Role.CommonUser;
-    case "Temp": return Role.Temp; // onDebug
+    case "Super Root": return Role.SuperRoot;
     default: return Role.CommonUser;
   }
 }
@@ -95,7 +95,7 @@ const ContentPanel: React.FC<{signStatus: boolean, messageClient: NotificationIn
         generateItem("WebSSH", "5", <WebSSH messageClient={messageClient} />),
         generateItem("Frequent Commands", "6", <Commands messageClient={messageClient} />),
       );
-    } else if (checkRole(user_role) == Role.Temp) { // onDebug
+    } else if (checkRole(user_role) == Role.SuperRoot) { // onDebug
       Pages.push(
         generateItem("User Manage", "2", <UserManage messageClient={messageClient} />),
         generateItem("Feedback Manage", "3", <FeedbackManage messageClient={messageClient} />),
