@@ -11,17 +11,6 @@ const UserInfo: React.FC<{ messageClient: NotificationInstance }> = (props) => {
     const [role, setRole] = useState("");
     const current_useremail = sessionStorage.getItem('useremail');
 
-    useEffect(() => {
-        if (!current_useremail){
-            messageClient.error({
-                message: `Failed to fetch user info!`,
-                description: "You should sign in first!",
-                placement: 'topLeft',
-                duration: 2,
-            });
-            return;
-        }
-    })
     if (current_useremail) {
         axios.post(`/user/info/${current_useremail}`, {})
         .then((res) => {

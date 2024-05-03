@@ -123,7 +123,6 @@ const UserManage: React.FC<{ messageClient: NotificationInstance}> = (props) => 
 
   const onChange: TableTransferProps['onChange'] = (targetKeys, direction, moveKeys) => {
     setTargetKeys(targetKeys);
-    console.log(moveKeys);
     let users: string[] = [];
     for (let target in moveKeys) {
       users.push(user_list[target].useremail);

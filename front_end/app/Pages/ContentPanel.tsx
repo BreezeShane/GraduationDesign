@@ -55,7 +55,6 @@ const ContentPanel: React.FC<{signStatus: boolean, messageClient: NotificationIn
   if (signStatus && useremail) {
     axios.get(`/user/check_role/${useremail}`)
       .then((res) => {
-        console.log(res);
         SetUserRole(res.data);
       }).catch((err) => {
         if (err.response.status === 401) {

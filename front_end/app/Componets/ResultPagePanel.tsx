@@ -32,7 +32,6 @@ const ResultPagePanel: React.FC<{ result_table: Object }> = memo((props) => {
     }, [result_table])
 
     const onChange: PaginationProps['onChange'] = (page) => {
-        console.log(page);
         setCurrent(page);
         updatePanelbyIndex(page, results)
     };

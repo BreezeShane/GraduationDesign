@@ -10,7 +10,6 @@ type TableRowSelection<T> = TableProps<T>['rowSelection'];
 type DataIndex = keyof DataType;
 
 interface DataType {
-  id: number,
   file_name: string,
   file_type: string,
   file_size: number,
@@ -40,10 +39,10 @@ const FileManage: React.FC<{ requestUrl: string }> = (props) => {
           let files: DataType[] = [];
           for (let idx in res.data) {
             let file = res.data[idx];
-            file.id = idx;
             files.push(file);
           }
           setFileList(files);
+          console.log("Filemanager.tsx var files: ", files);
         }
       }).catch((err) => {
         console.log("get files error: ", err)
@@ -97,29 +96,26 @@ const FileManage: React.FC<{ requestUrl: string }> = (props) => {
     };
 
     const handleBackupFiles = () => {
-      let files2operate: any[] = [];
-      for (let idx in selected_row_keys){
-        let key: any = selected_row_keys[idx];
-        files2operate.push(file_list[key].file_name);
-      }
+      console.log(selected_row_keys)
       axios.post("/admin/model_manage", {
         useremail: sessionStorage.getItem('useremail'),
         operation_type: "backup",
-        files2operate: JSON.stringify(files2operate)
+        files2operate: JSON.stringify(selected_row_keys)
       })
     }
 
     const handleDeleteFile = () => {
-      let files2operate = [];
-      for (let idx in selected_row_keys){
-        let key: any = selected_row_keys[idx];
-        files2operate.push(file_list[key].file_name);
-      }
-      console.log(files2operate);
       axios.post("/admin/model_manage", {
         useremail: sessionStorage.getItem('useremail'),
         operation_type: "remove",
-        files2operate: JSON.stringify(files2operate)
+        files2operate: JSON.stringify(selected_row_keys)
+      }).then((res) => {
+        if (res.status == 200) {
+          let new_file_list = file_list.filter((item, index) => {
+            return selected_row_keys.indexOf(item.file_name) < 0;
+          })
+          setFileList(new_file_list);
+        }
       })
     }
 
@@ -287,7 +283,6 @@ const FileManage: React.FC<{ requestUrl: string }> = (props) => {
     ];
 
     const onShowSizeChange: PaginationProps['onShowSizeChange'] = (current, page_size) => {
-      console.log(current, page_size);
       setPageSize(page_size)
     };
 
@@ -318,7 +313,7 @@ const FileManage: React.FC<{ requestUrl: string }> = (props) => {
             </Button>
           </Space>
           <Table
-            rowKey={item=>item.id}
+            rowKey={item=>item.file_name}
             rowSelection={rowSelection}
             columns={columns}
             dataSource={file_list}

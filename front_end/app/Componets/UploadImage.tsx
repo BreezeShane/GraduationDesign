@@ -38,7 +38,6 @@ const UploadImage: React.FC<{ messageClient: NotificationInstance, fileList: Upl
         }
       }).then(res => {
         onSuccess!(file);
-        console.log(res);
       })
       .catch(err=>{
         const error = new Error(err);

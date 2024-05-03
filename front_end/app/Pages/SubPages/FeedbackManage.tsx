@@ -1,50 +1,40 @@
-import React, { useState } from 'react';
-import { Table } from 'antd';
+import React, { ReactNode, useEffect, useState } from 'react';
+import { Button, Space, Table } from 'antd';
 import type { TableColumnsType, TableProps } from 'antd';
 import { NotificationInstance } from 'antd/es/notification/interface';
+import axios from 'axios';
 
 type TableRowSelection<T> = TableProps<T>['rowSelection'];
 
 interface DataType {
   key: React.Key;
-  name: string;
-  age: number;
-  address: string;
-}
-
-const columns: TableColumnsType<DataType> = [
-  {
-    title: 'Name',
-    dataIndex: 'name',
-  },
-  {
-    title: 'Age',
-    dataIndex: 'age',
-  },
-  {
-    title: 'Address',
-    dataIndex: 'address',
-  },
-];
-
-const data: DataType[] = [];
-for (let i = 0; i < 46; i++) {
-  data.push({
-    key: i,
-    name: `Edward King ${i}`,
-    age: 32,
-    address: `London, Park Lane no. ${i}`,
-  });
+  username: string,
+  useremail: string,
+  contribution: number,
 }
 
 const FeedbackManage: React.FC<{messageClient: NotificationInstance}> = (props) => {
     const { messageClient } = props;
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+    const [feedbackList, setFeedbackList] = useState<DataType[]>([]);
 
     const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
-        console.log('selectedRowKeys changed: ', newSelectedRowKeys);
         setSelectedRowKeys(newSelectedRowKeys);
     };
+
+    useEffect(() => {
+      axios.get("/admin/feedback_manage",{
+        params: {
+          email: sessionStorage.getItem("useremail"),
+        }
+      }).then((res) => {
+        let tfeedback = res.data;
+        console.log(tfeedback);
+        setFeedbackList(tfeedback);
+      }).catch((err) => {
+        console.log("get files error: ", err)
+      });
+    }, []);
 
     const rowSelection: TableRowSelection<DataType> = {
         selectedRowKeys,
@@ -83,8 +73,37 @@ const FeedbackManage: React.FC<{messageClient: NotificationInstance}> = (props) 
             },
         ],
     };
-    return <Table rowSelection={rowSelection} columns={columns} dataSource={data} />;
 
+    const handleOperation = (record: DataType) => {
+      console.log(record.key); // 获取当前行的ID
+      console.log(record.username); // 获取当前行的Name
+    }
+
+    const columns: TableColumnsType<DataType> = [
+      {
+        title: 'User Name',
+        dataIndex: 'username',
+      },
+      {
+        title: 'Email',
+        dataIndex: 'useremail',
+      },
+      {
+        title: 'Contributions',
+        dataIndex: 'contribution',
+      },
+      {
+        title: 'Operations',
+        render: (text, record) => (
+          <Space>
+            <Button onClick={() => handleOperation(record)} style={{ background: "red", borderColor: "yellow" }}></Button>
+            <Button onClick={() => handleOperation(record)} style={{ background: "red", borderColor: "yellow" }}></Button>
+          </Space>
+        ),
+      }
+    ];
+
+    return <Table rowSelection={rowSelection} columns={columns} dataSource={feedbackList} />;
 };
 
 export default FeedbackManage;
