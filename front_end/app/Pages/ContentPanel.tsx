@@ -34,7 +34,6 @@ const generateItem = (label: string, key: string, children: ReactNode) => {
 }
 
 const checkRole = (role: string) => {
-  // console.log(role);
   switch(role){
     case "User Administrator": return Role.UserAdmin;
     case "Model Administrator": return Role.ModelAdmin;
