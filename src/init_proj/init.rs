@@ -28,6 +28,7 @@ fn main() -> Result<(), Error> {
             time_out        BIGINT NOT NULL,
             pic_link        TEXT NOT NULL,
             real_label      VARCHAR NOT NULL,
+            submit_count    BIGINT NOT NULL,
             acceptable      BOOLEAN NOT NULL
         );
     ")?;
@@ -50,13 +51,17 @@ fn main() -> Result<(), Error> {
     const DATASETS_DIRECTORY: &str = "./datasets/";
     const MODEL_STORED_PATH: &str = "./models/";
     const MODEL_BACKUP_STORED_PATH: &str = "./.modbak/";
+    const UFEEDBACK_STORED_DIRECTORY: &str = "./ufeedback/";
+    const DATA_TO_TRAIN_DIRECTORY: &str = "./data2train/";
     let vec_path = vec![
         USER_PIC_PATH,
         DATASETS_DIRECTORY,
         MODEL_STORED_PATH,
         MODEL_BACKUP_STORED_PATH,
+        UFEEDBACK_STORED_DIRECTORY,
+        DATA_TO_TRAIN_DIRECTORY
     ];
-    init_dir(vec_path);
+    init_dirs(vec_path);
 
     // init document database storage file
     const QUEUE_STORED_PATH: &str = "./queue.db";
@@ -67,7 +72,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn init_dir(vec_path: Vec<&str>) {
+fn init_dirs(vec_path: Vec<&str>) {
     let iter = vec_path.iter();
 
     for path in iter {
