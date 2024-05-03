@@ -1,6 +1,7 @@
 // io_agent.rs
 pub const USER_PIC_PATH: &str = "./data_src/";
 pub const DATASETS_DIRECTORY: &str = "./datasets/";
+pub const TFEEDBACK_STORED_DIRECTORY: &str = "./tfeedback/";
 pub const UFEEDBACK_STORED_DIRECTORY: &str = "./ufeedback/";
 pub const DATA_TO_TRAIN_DIRECTORY: &str = "./data2train/";
 

@@ -1,5 +1,6 @@
 use axum::extract::State;
 use base64::{prelude::BASE64_URL_SAFE, Engine};
+use tokio::{fs::File, io::AsyncWriteExt};
 use std::fs::create_dir;
 use axum::{
     extract::{Multipart, Path as RoutePath},
@@ -11,13 +12,26 @@ use crate::config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH, USER_PIC_PATH};
 use crate::authenticator::{check_permission, Permission};
 use crate::MultiState;
 
-pub fn obtain_dir(user_email: &String) -> Result<String, std::ffi::OsString>{
-    let path_buffer = __obtain_dir(&user_email).unwrap();
+pub fn path_is_valid(path: &str) -> bool {
+    let path = std::path::Path::new(path);
+    let mut components = path.components().peekable();
+
+    if let Some(first) = components.peek() {
+        if !matches!(first, std::path::Component::Normal(_)) {
+            return false;
+        }
+    }
+
+    components.count() == 1
+}
+
+pub fn obtain_dir(user_email: &str) -> Result<String, std::ffi::OsString>{
+    let path_buffer = __obtain_dir(user_email).unwrap();
     path_buffer.into_os_string().into_string()
 }
 
-fn __obtain_dir(user_email: &String) -> Result<PathBuf, String> {
-    let user_dir_name = BASE64_URL_SAFE.encode(user_email);
+fn __obtain_dir(user_email: &str) -> Result<PathBuf, String> {
+    let user_dir_name = generate_user_folder_name(user_email);
 
     let path = Path::new(USER_PIC_PATH);
     let user_dir_path = path.join(user_dir_name);
@@ -33,6 +47,17 @@ fn __obtain_dir(user_email: &String) -> Result<PathBuf, String> {
         }
     }
     return Ok(user_dir_path);
+}
+
+pub fn generate_user_folder_name(user_email: &str) -> String {
+    BASE64_URL_SAFE.encode(user_email).to_owned()
+}
+
+pub fn generate_new_file_name(user_email: &str, file_name: &str) -> String {
+    let mut new_file_name = generate_user_folder_name(user_email);
+    new_file_name.push_str("_");
+    new_file_name.push_str(file_name);
+    return new_file_name;
 }
 
 pub async fn handler_upload_pic(
@@ -78,21 +103,38 @@ pub async fn remove_models(files: Iter<'_, String>) -> tokio::io::Result<u64> {
     count
 }
 
-pub async fn move_images_in_fb(files: Iter<'_, String>) -> tokio::io::Result<u64> {
-    todo!()
+pub async fn move_image_in_fb(file_name: &str, src_dir_path: &PathBuf, dest_dir_path: &PathBuf) -> tokio::io::Result<u64> {
+    let src_path = src_dir_path.join(file_name);
+    let dest_path = dest_dir_path.join(file_name);
+    let result = tokio::fs::copy(src_dir_path, dest_path).await;
+    if let Ok(_) = result {
+        let result = tokio::fs::remove_file(src_path).await;
+        match result {
+            Ok(()) => return Ok(1),
+            Err(e) => return Err(e)
+        }
+    } else {
+        return Err(Error::new(
+            ErrorKind::Interrupted,
+            format!("Unable to move file named {}!",
+            file_name
+        )));
+    }
 }
 
-pub fn path_is_valid(path: &str) -> bool {
-    let path = std::path::Path::new(path);
-    let mut components = path.components().peekable();
+pub async fn rename_file(current_file_name: &str, new_file_name: &str, src_dir_path: &PathBuf) -> Result<(), Error> {
+    let src_path = src_dir_path.join(current_file_name);
+    let dest_path = src_dir_path.join(new_file_name);
 
-    if let Some(first) = components.peek() {
-        if !matches!(first, std::path::Component::Normal(_)) {
-            return false;
-        }
-    }
+    let result = tokio::fs::rename(src_path, dest_path).await;
+    return result;
+}
 
-    components.count() == 1
+pub async fn create_and_write_label_file(file_name: &str, input_data: &[u8], dest_dir_path: &PathBuf)  -> tokio::io::Result<()> {
+    let dest_path = dest_dir_path.join(file_name);
+    let mut file = File::create(dest_path).await?;
+    file.write_all(input_data).await?;
+    Ok(())
 }
 
 async fn __copy_files(files: Iter<'_, String>, src_dir_path: &PathBuf, dest_dir_path: &PathBuf) -> tokio::io::Result<u64> {

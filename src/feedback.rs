@@ -11,21 +11,24 @@ use serde::{Deserialize, Serialize};
 use tokio_postgres::row::Row;
 
 use crate::authenticator::{check_permission, Permission};
-use crate::doc_database::{TrainingTask, QueueTrait};
-use crate::io_cache::obtain_dir;
-use crate::config::FEEDBACK_EXPIRATION;
+use crate::io_agent::{create_and_write_label_file, generate_new_file_name, move_image_in_fb, obtain_dir, rename_file};
+use crate::config::{DATA_TO_TRAIN_DIRECTORY, FEEDBACK_EXPIRATION, TFEEDBACK_STORED_DIRECTORY, UFEEDBACK_STORED_DIRECTORY};
 use crate::MultiState;
 
+#[derive(Serialize, Deserialize)]
+pub struct  FeedbackFileUnit {
+    filename: String,
+    label: Option<String>
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct  RequestFeedback {
     useremail: String,
-    pic_name: String,
-    real_label: Option<String>
+    file_with_label_list: Vec<FeedbackFileUnit>
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct AccRejFeedback {
+pub struct AccRejFeedbackUnit {
     useremail: String,
     pic_path: String,
     real_label: String,
@@ -33,13 +36,25 @@ pub struct AccRejFeedback {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct AccRejFeedback {
+    useremail: String,
+    files_to_operate: Vec<AccRejFeedbackUnit>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Feedback {
     timestamp: i64,
     from_user_email: String,
-    deadline: Option<i64>,
-    pic_path: String,
+    time_out: Option<i64>,
+    pic_link: String,
     real_label: Option<String>,
+    submit_count: i64,
     acceptable: bool
+}
+
+#[derive(Deserialize)]
+pub struct RequestEmail {
+    email: String
 }
 
 impl Feedback {
@@ -47,13 +62,14 @@ impl Feedback {
         let mut fb = Feedback {
             timestamp: row.get("time_stamp"),
             from_user_email: row.get("from_user_email"),
-            deadline: None,
-            pic_path: row.get("pic_path"),
+            time_out: None,
+            pic_link: row.get("pic_link"),
             real_label: None,
-            acceptable: false
+            submit_count: row.get("submit_count"),
+            acceptable: row.get("acceptable"),
         };
         if trainable {
-            fb.deadline = row.get("time_out");
+            fb.time_out = row.get("time_out");
             fb.real_label = row.get("real_label");
         }
         fb
@@ -64,179 +80,68 @@ pub async fn handler_subm_fb(
     State(multi_state): State<MultiState>,
     Form(user_feedback): Form<RequestFeedback>
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    if !check_permission(&multi_state.db_pool, &user_feedback.useremail, Permission::Common).await.unwrap() {
+    let useremail = user_feedback.useremail;
+    if !check_permission(&multi_state.db_pool, &useremail, Permission::Common).await.unwrap() {
         return Err(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
-
-    let (feedback, insert_statement) = (|| -> (Feedback, &str) {
-        let feedback;
-        let insert_statement;
-        let pic_path =
-            PathBuf::from(
-                obtain_dir(&user_feedback.useremail)
-                .unwrap()
-            )
-                .join(user_feedback.pic_name).
-                into_os_string().into_string().unwrap();
-
-        match user_feedback.real_label {
-            None => {
-                feedback = Feedback {
-                    timestamp: Local::now().timestamp(),
-                    from_user_email: user_feedback.useremail.clone(),
-                    pic_path,
-                    acceptable: false,
-                    real_label: None,
-                    deadline: None,
-                };
-                insert_statement = "
-                    INSERT INTO UFeedback (time_stamp, from_user_id, pic_link, acceptable)
-                    VALUES
-                    ($1, $2, $3, $4)
-                ";
-            },
-            Some(_) => {
-                feedback = Feedback {
-                    timestamp: Local::now().timestamp(),
-                    from_user_email: user_feedback.useremail.clone(),
-                    deadline: Some(Local::now().timestamp() + FEEDBACK_EXPIRATION),
-                    pic_path,
-                    real_label: user_feedback.real_label,
-                    acceptable: false
-                };
-                insert_statement = "
-                    INSERT INTO TFeedback (time_stamp, from_user_id, time_out, pic_link, real_label, acceptable)
-                    VALUES
-                    ($1, $2, $3, $4, $5, $6)
-                ";
-            }
-        }
-        (feedback, insert_statement)
-    })();
-
-    let params: Vec<&(dyn ToSql + Sync)> = match feedback.real_label {
-        None => vec![
-            &feedback.timestamp,
-            &feedback.from_user_email,
-            &feedback.pic_path,
-            &feedback.acceptable,
-        ],
-        Some(_) => vec![
-            &feedback.timestamp,
-            &feedback.from_user_email,
-            &feedback.deadline,
-            &feedback.pic_path,
-            &feedback.real_label,
-            &feedback.acceptable,
-        ]
-    };
-
-    // let (insert_statement, params) = (
-    //     || -> (&str, Vec<&(dyn ToSql + Sync)>) {
-    //         let feedback;
-    //         let insert_statement;
-    //         let params: Vec<&(dyn ToSql + Sync)>;
-    //         match user_feedback.real_label {
-    //             None => {
-    //                 feedback = Feedback {
-    //                     timestamp: Local::now().timestamp(),
-    //                     from_user_email: user_feedback.from_user_email.clone(),
-    //                     pic_path: user_feedback.pic_path.clone(),
-    //                     acceptable: false,
-    //                     real_label: None,
-    //                     deadline: None,
-    //                 };
-    //                 insert_statement = "
-    //                     INSERT INTO UFeedback (time_stamp, from_user_id, pic_link, acceptable)
-    //                     VALUES
-    //                     ($1, $2, $3, $4)
-    //                 ";
-    //                 params = vec![
-    //                     &feedback.timestamp,
-    //                     &feedback.from_user_email,
-    //                     &feedback.pic_path,
-    //                     &feedback.acceptable,
-    //                 ];
-    //             },
-    //             Some(_) => {
-    //                 feedback = Feedback {
-    //                     timestamp: Local::now().timestamp(),
-    //                     from_user_email: current_user.email.clone(),
-    //                     deadline: Some(Local::now().timestamp() + FEEDBACK_EXPIRATION),
-    //                     pic_path: user_feedback.pic_path.clone(),
-    //                     real_label: user_feedback.real_label,
-    //                     acceptable: false
-    //                 };
-    //                 insert_statement = "
-    //                     INSERT INTO TFeedback (time_stamp, from_user_id, time_out, pic_link, real_label, acceptable)
-    //                     VALUES
-    //                     ($1, $2, $3, $4, $5, $6)
-    //                 ";
-    //                 params = vec![
-    //                     &feedback.timestamp,
-    //                     &feedback.from_user_email,
-    //                     &feedback.deadline,
-    //                     &feedback.pic_path,
-    //                     &feedback.real_label,
-    //                     &feedback.acceptable,
-    //                 ]
-    //             }
-    //         }
-    //         (insert_statement, params)
-    // })();
-
     let client = multi_state.db_pool.get().await.unwrap();
-    let feedback_statement = client
+    let files_with_label = user_feedback.file_with_label_list;
+    for item in files_with_label.iter() {
+        let feedback_for_submission = __generate_feedback(item, useremail.as_str()).await.unwrap();
+        let insert_statement = __generate_insert_statement(item);
+        let params = __generate_params(&feedback_for_submission);
+
+        let feedback_statement = client
             .prepare(&insert_statement).await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
-    let rows = client
-    .execute(&feedback_statement, &params)
-    .await
-    .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+        let rows = client
+            .execute(&feedback_statement, &params)
+            .await
+            .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
 
-    if rows < 1 {
-        return Err((StatusCode::NOT_MODIFIED, "Insert feedback failed".to_string()));
+        if rows < 1 {
+            return Err((StatusCode::NOT_MODIFIED, "Insert feedback failed".to_string()));
+        }
     }
-
     Ok((StatusCode::OK, "Succeed to submit the feedback!".to_string()))
 }
 
 pub async fn handler_fetch_all_fb(
     State(multi_state): State<MultiState>,
-    Query(user_id): Query<String>
+    Query(get_request): Query<RequestEmail>
 ) -> Result<Response, (StatusCode, String)> {
-    if !check_permission(&multi_state.db_pool, &user_id, Permission::MngFeedBack).await.unwrap() {
+    let useremail = get_request.email;
+    if !check_permission(&multi_state.db_pool, &useremail, Permission::MngFeedBack).await.unwrap() {
         return Err(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
 
-    let vec_tfbs = _fetch_fb(&multi_state.db_pool, true).await;
-    let vec_ufbs =  _fetch_fb(&multi_state.db_pool, false).await;
+    let vec_tfbs = __fetch_fb(&multi_state.db_pool, true).await;
+    // let vec_ufbs =  _fetch_fb(&multi_state.db_pool, false).await;
 
-    return Ok(
-        Json((vec_tfbs, vec_ufbs)).into_response()
-    );
+    return Ok(Json(vec_tfbs).into_response());
 }
 
-async fn _fetch_fb(pool: &Pool, trainable: bool) -> Vec<Feedback> {
+async fn __fetch_fb(pool: &Pool, trainable: bool) -> Vec<Feedback> {
     let client = pool.get().await.unwrap();
     let query_str = match trainable {
         true => "
-            SELECT time_stamp,from_user_email,time_out,pic_link,real_label,acceptable FROM TFeedback;
+            SELECT time_stamp, from_user_email, time_out, pic_link, real_label, acceptable FROM TFeedback;
         ",
         false => "
-            SELECT time_stamp,from_user_email,pic_link,acceptable FROM UFeedback;
+            SELECT time_stamp, from_user_email, pic_link, acceptable FROM UFeedback;
         "
     };
 
     let query_tfb_statement = client
         .prepare(query_str)
-        .await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string())).unwrap();
+        .await
+        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string())).unwrap();
 
-    let vec_fb: Vec<Feedback> = client
+    let vec_fb = client
         .query(&query_tfb_statement, &[])
         .await
         .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string())).unwrap()
@@ -249,56 +154,89 @@ async fn _fetch_fb(pool: &Pool, trainable: bool) -> Vec<Feedback> {
 
 pub async fn handler_acc_rej_fb(
     State(multi_state): State<MultiState>,
-    Form(acc_rej_fb): Form<AccRejFeedback>
+    Form(request_fb): Form<AccRejFeedback>
 ) -> Result<(), (StatusCode, String)> {
-    if !check_permission(&multi_state.db_pool, &acc_rej_fb.useremail, Permission::MngFeedBack).await.unwrap() {
+    if !check_permission(&multi_state.db_pool, &request_fb.useremail, Permission::MngFeedBack).await.unwrap() {
         return Err(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
-
+    let files_with_label = request_fb.files_to_operate;
     let client = multi_state.db_pool.get().await.unwrap();
-    let del_statement = client
-    .prepare("
-        DELETE FROM TFeedback WHERE pic_link='$1';
-    ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+    let del_tfb_statement = client
+        .prepare("
+            DELETE FROM TFeedback WHERE pic_link='$1';
+        ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+    let query_ufb_statement = client
+        .prepare("
+            SELECT pic_link FROM UFeedback WHERE pic_link='$1'
+        ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+    let del_ufb_statement = client
+        .prepare("
+            DELETE FROM UFeedback WHERE pic_link='$1';
+        ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+    let tfeedback_dir_path = PathBuf::from(TFEEDBACK_STORED_DIRECTORY);
+    let data_to_train_dir_path = PathBuf::from(DATA_TO_TRAIN_DIRECTORY);
 
-    let pic_path = acc_rej_fb.pic_path;
-    let label = acc_rej_fb.real_label;
 
-    if acc_rej_fb.accept {
-        let task = TrainingTask {
-            pic_path: pic_path.clone(),
-            label: label.clone()
-        };
-        let mut queue = multi_state.train_queue.lock().unwrap();
-        let _ = queue.append_task(task);
+    for file in files_with_label.iter() {
+        if file.accept {
+            move_image_in_fb(
+                file.pic_path.as_str(),
+                &tfeedback_dir_path,
+                &data_to_train_dir_path
+            ).await.unwrap();
+            create_and_write_label_file(
+                file.pic_path.as_str(),
+                file.real_label.as_bytes(),
+                &data_to_train_dir_path)
+            .await.unwrap();
+
+            let query_ufb_vec = client
+                .query(&query_ufb_statement, &[&file.pic_path])
+                .await
+                .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string())).unwrap();
+            if query_ufb_vec.len() > 0 {
+                let del_ufb_row = client
+                    .execute(&del_ufb_statement, &[&file.pic_path])
+                    .await
+                    .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+                if del_ufb_row < 1 {
+                    return Err((StatusCode::NOT_MODIFIED, "Remove untrainable data row failed".to_string()));
+                }
+            }
+        }
+        let del_tfb_row = client
+            .execute(&del_tfb_statement, &[&file.pic_path])
+            .await
+            .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+        if del_tfb_row < 1 {
+            return Err((StatusCode::NOT_MODIFIED, "Remove trainable data row failed".to_string()));
+        }
     }
-
-    let row = client
-        .execute(&del_statement, &[&pic_path])
-        .await
-        .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
-
-    if row < 1 {
-        return Err((StatusCode::NOT_MODIFIED, "Remove trainable data row failed".to_string()));
-    }
-
+    // if request_fb.accept {
+    //     let task = TrainingTask {
+    //         pic_path: pic_path.clone(),
+    //         label: label.clone()
+    //     };
+    //     let mut queue = multi_state.train_queue.lock().unwrap();
+    //     let _ = queue.append_task(task);
+    // }
     Ok(())
 }
 
 
 pub async fn handler_fetch_ufb(
     State(multi_state): State<MultiState>,
-    Query(user_id): Query<String>
+    Query(request_fetch): Query<RequestEmail>
 ) -> Result<Response, (StatusCode, String)> {
-    if !check_permission(&multi_state.db_pool, &user_id, Permission::MngFeedBack).await.unwrap() {
+    if !check_permission(&multi_state.db_pool, &request_fetch.email, Permission::Common).await.unwrap() {
         return Err(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
 
-    let vec_ufbs =  _fetch_fb(&multi_state.db_pool, false).await;
+    let vec_ufbs =  __fetch_fb(&multi_state.db_pool, false).await;
 
     return Ok(
         Json(vec_ufbs).into_response()
@@ -309,54 +247,209 @@ pub async fn handler_label_pic(
     State(multi_state): State<MultiState>,
     Form(request_feedback): Form<RequestFeedback>
 ) -> Result<(), (StatusCode, String)> {
-    if let None = request_feedback.real_label {
-        return Err((StatusCode::CONFLICT, "Not set the label!".to_string()));
+    if !check_permission(&multi_state.db_pool, &request_feedback.useremail, Permission::Common).await.unwrap() {
+        return Err(
+            (StatusCode::FORBIDDEN, "Not permitted!".to_string())
+        );
     }
-
-    let fb = Feedback {
-        timestamp: Local::now().timestamp(),
-        from_user_email: request_feedback.useremail,
-        deadline: Some(Local::now().timestamp() + FEEDBACK_EXPIRATION),
-        pic_path: request_feedback.pic_name,
-        real_label: request_feedback.real_label,
-        acceptable: false
-    };
-
+    let ufeedback_dir_path = PathBuf::from(UFEEDBACK_STORED_DIRECTORY);
+    let files_with_label = request_feedback.file_with_label_list;
     let client = multi_state.db_pool.get().await.unwrap();
-    let del_statement = client
-    .prepare("
-        DELETE FROM UFeedback WHERE pic_link='$1';
-    ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+
+    let query_statement = client
+        .prepare("
+            SELECT pic_link, real_label, submit_count FROM TFeedback
+            WHERE
+            pic_link='$1' AND real_label='$2'
+        ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+
+    let update_statement = client
+        .prepare("
+            UPDATE TFeedback
+            SET submit_count=$1
+            WHERE pic_link='$2'
+        ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+
     let insert_statement = client
-    .prepare("
-        INSERT INTO TFeedback (time_stamp, from_user_email, time_out, pic_link, real_label, acceptable)
-        VALUES
-        ($1, $2, $3, $4, $5, $6)
-    ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+        .prepare("
+            INSERT INTO TFeedback (time_stamp, from_user_email, time_out, pic_link, real_label, submit_count, acceptable)
+            VALUES
+            ($1, $2, $3, $4, $5, $6, $7)
+        ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
-    let insert_row = client
-            .execute(&insert_statement,
-                &[
-                    &fb.timestamp, &fb.from_user_email, &fb.deadline,
-                    &fb.pic_path, &fb.real_label, &fb.acceptable
-                ])
-            .await
-            .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()));
-
-    if let Ok(ins_count) = insert_row {
-        if ins_count < 1 {
-            return Err((StatusCode::NOT_MODIFIED, "Failed to insert new trainable feedback!".to_string()));
+    for file in files_with_label.iter() {
+        if let None = file.label {
+            return Err((StatusCode::CONFLICT, "Not set enough label!".to_string()));
         }
-        let delet_row = client
-        .execute(&del_statement,
-            &[
-                &fb.pic_path
-            ])
-        .await
-        .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
-        if delet_row < 1 {
-            return Err((StatusCode::NOT_MODIFIED, "Failed to delete original untrainable feedback!".to_string()));
+
+        let ufb_dir_pathbuf = ufeedback_dir_path.join(file.filename.as_str());
+        let src_path = ufb_dir_pathbuf.as_os_str().to_str().unwrap();
+
+
+        let feedback = Feedback {
+            timestamp: Local::now().timestamp(),
+            from_user_email: request_feedback.useremail.to_owned(),
+            time_out: Some(Local::now().timestamp() + FEEDBACK_EXPIRATION),
+            pic_link: src_path.to_owned(),
+            real_label: file.label.to_owned(),
+            submit_count: 0,
+            acceptable: false
+        };
+
+        let query_row = client
+            .query(&query_statement, &[&feedback.pic_link, &feedback.real_label])
+            .await
+            .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
+            .iter()
+            .map(|row| Feedback::from_row_ref(row, false))
+            .collect::<Vec<Feedback>>()
+            .pop();
+
+        match query_row {
+            Some(fb) => {
+                let new_count = fb.submit_count + 1;
+                let update_row = client
+                    .execute(&update_statement, &[&new_count, &fb.pic_link])
+                    .await
+                    .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+                if update_row > 0 {
+                    return Ok(());
+                } else {
+                    return Err((StatusCode::NOT_MODIFIED, "Failed to update the record!".to_string()));
+                }
+            },
+            None => {
+                let insert_row = client
+                    .execute(&insert_statement, &[
+                        &feedback.timestamp, &feedback.from_user_email, &feedback.time_out,
+                        &feedback.pic_link, &feedback.real_label, &feedback.submit_count, &feedback.acceptable
+                    ])
+                    .await
+                    .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+
+                if insert_row > 0 {
+                    return Ok(());
+                } else {
+                    return Err((StatusCode::NOT_MODIFIED, "Failed to update the record!".to_string()));
+                }
+            }
         }
     }
+
+
+    // let insert_row = client
+    //         .execute(&insert_statement,
+    //             &[
+    //                 &fb.timestamp, &fb.from_user_email, &fb.time_out,
+    //                 &fb.pic_link, &fb.real_label, &fb.acceptable
+    //             ])
+    //         .await
+    //         .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()));
+
+    // if let Ok(ins_count) = insert_row {
+    //     if ins_count < 1 {
+    //         return Err((StatusCode::NOT_MODIFIED, "Failed to insert new trainable feedback!".to_string()));
+    //     }
+    //     let delet_row = client
+    //     .execute(&del_statement,
+    //         &[
+    //             &fb.pic_link
+    //         ])
+    //     .await
+    //     .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+    //     if delet_row < 1 {
+    //         return Err((StatusCode::NOT_MODIFIED, "Failed to delete original untrainable feedback!".to_string()));
+    //     }
+    // }
     Ok(())
+}
+
+async fn __generate_feedback(file_unit: &FeedbackFileUnit, useremail: &str) -> Result<Feedback, std::io::Error> {
+    let ufeedback_dir_path = PathBuf::from(UFEEDBACK_STORED_DIRECTORY);
+    let tfeedback_dir_path = PathBuf::from(TFEEDBACK_STORED_DIRECTORY);
+
+    let src_dir_path = PathBuf::from(obtain_dir(useremail).unwrap());
+
+    if let Some(label) = file_unit.label.to_owned() {
+        let result = move_image_in_fb(file_unit.filename.as_str(), &src_dir_path, &tfeedback_dir_path).await;
+        if let Err(e) = result {
+            return  Err(e);
+        }
+        let new_file_name = generate_new_file_name(useremail, file_unit.filename.as_str());
+        let result = rename_file(file_unit.filename.as_str(), new_file_name.as_str(), &src_dir_path).await;
+        if let Err(e) = result {
+            return Err(e);
+        }
+
+        return Ok(Feedback {
+            timestamp: Local::now().timestamp(),
+            from_user_email: useremail.to_string(),
+            pic_link: new_file_name,
+            time_out: Some(Local::now().timestamp() + FEEDBACK_EXPIRATION),
+            real_label: Some(label),
+            submit_count: 0,
+            acceptable: false
+        })
+    } else {
+        let result = move_image_in_fb(file_unit.filename.as_str(), &src_dir_path, &ufeedback_dir_path).await;
+        if let Err(e) = result {
+            return  Err(e);
+        }
+        let new_file_name = generate_new_file_name(useremail, file_unit.filename.as_str());
+        let result = rename_file(file_unit.filename.as_str(), new_file_name.as_str(), &src_dir_path).await;
+        if let Err(e) = result {
+            return Err(e);
+        }
+
+        return Ok(Feedback {
+            timestamp: Local::now().timestamp(),
+            from_user_email: useremail.to_string(),
+            pic_link: new_file_name,
+            time_out: None,
+            real_label: None,
+            submit_count: 0,
+            acceptable: false
+        });
+    }
+}
+
+fn __generate_insert_statement(file_unit: &FeedbackFileUnit) -> String {
+    let stmt = match file_unit.label {
+        Some(_) => {
+            "
+                INSERT INTO TFeedback (time_stamp, from_user_id, time_out, pic_link, real_label, acceptable)
+                VALUES
+                ($1, $2, $3, $4, $5, $6)
+            "
+        },
+        None => {
+            "
+                INSERT INTO UFeedback (time_stamp, from_user_id, pic_link, acceptable)
+                VALUES
+                ($1, $2, $3, $4)
+            "
+        }
+    };
+    return stmt.to_owned();
+}
+
+fn __generate_params<'a>(feedback: &'a Feedback) -> Vec<&'a (dyn ToSql + Sync)> {
+    let params: Vec<&(dyn ToSql + Sync)> = match feedback.real_label {
+        None => vec![
+            &feedback.timestamp,
+            &feedback.from_user_email,
+            &feedback.pic_link,
+            &feedback.acceptable,
+        ],
+        Some(_) => vec![
+            &feedback.timestamp,
+            &feedback.from_user_email,
+            &feedback.time_out,
+            &feedback.pic_link,
+            &feedback.real_label,
+            &feedback.submit_count,
+            &feedback.acceptable,
+        ]
+    };
+    return params;
 }
