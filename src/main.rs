@@ -1,6 +1,6 @@
 pub mod daemon;
 pub mod config;
-pub mod io_cache;
+pub mod io_agent;
 pub mod feedback;
 pub mod user_manager;
 pub mod doc_database;
@@ -14,7 +14,7 @@ use authenticator::{handler_sign_in, handler_sign_up, middleware_authorize, hand
 use dl_svc::handler_infer;
 use chrono::Local;
 use daemon::{Cronie, Daemon};
-use io_cache::handler_upload_pic;
+use io_agent::handler_upload_pic;
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use feedback::{handler_acc_rej_fb, handler_fetch_all_fb, handler_fetch_ufb, handler_label_pic, handler_subm_fb};
 use model_manager::handler_fetch_all_models;

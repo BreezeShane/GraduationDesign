@@ -5,6 +5,8 @@ data_src/
 datasets/
 models/
 .modbak/
+ufeedback/
+data2train/
 
 ### Rust
 

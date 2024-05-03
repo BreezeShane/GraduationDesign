@@ -1,13 +1,14 @@
 use axum::extract::State;
 use base64::{prelude::BASE64_URL_SAFE, Engine};
-use std::path::{Path, PathBuf};
 use std::fs::create_dir;
 use axum::{
     extract::{Multipart, Path as RoutePath},
     http::StatusCode,
 };
+use std::{io::{Error, ErrorKind}, path::{Path, PathBuf}, slice::Iter};
+
+use crate::config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH, USER_PIC_PATH};
 use crate::authenticator::{check_permission, Permission};
-use crate::config::USER_PIC_PATH;
 use crate::MultiState;
 
 pub fn obtain_dir(user_email: &String) -> Result<String, std::ffi::OsString>{
@@ -64,6 +65,76 @@ pub async fn handler_upload_pic(
     Err((StatusCode::NOT_ACCEPTABLE, "没有上传文件或上传文件不合法".to_string()))
 }
 
+pub async fn backup_models(files: Iter<'_, String>) -> tokio::io::Result<u64> {
+    let src_dir_path = PathBuf::from(MODEL_STORED_PATH);
+    let dest_dir_path = PathBuf::from(MODEL_BACKUP_STORED_PATH);
+    let total_write = __copy_files(files, &src_dir_path, &dest_dir_path).await;
+    return total_write;
+}
+
+pub async fn remove_models(files: Iter<'_, String>) -> tokio::io::Result<u64> {
+    let src_dir_path = PathBuf::from(MODEL_STORED_PATH);
+    let count = __remove_files(files, &src_dir_path).await;
+    count
+}
+
+pub async fn move_images_in_fb(files: Iter<'_, String>) -> tokio::io::Result<u64> {
+    todo!()
+}
+
+pub fn path_is_valid(path: &str) -> bool {
+    let path = std::path::Path::new(path);
+    let mut components = path.components().peekable();
+
+    if let Some(first) = components.peek() {
+        if !matches!(first, std::path::Component::Normal(_)) {
+            return false;
+        }
+    }
+
+    components.count() == 1
+}
+
+async fn __copy_files(files: Iter<'_, String>, src_dir_path: &PathBuf, dest_dir_path: &PathBuf) -> tokio::io::Result<u64> {
+    let mut total_write = 0;
+    for file in files {
+        let src_path = src_dir_path.join(file.as_str());
+        let dest_path = dest_dir_path.join(file.as_str());
+        let write_bytes = tokio::fs::copy(src_path, dest_path).await.unwrap();
+        total_write += write_bytes;
+    }
+    Ok(total_write)
+}
+
+async fn __remove_files(files: Iter<'_, String>, src_dir_path: &PathBuf) -> tokio::io::Result<u64> {
+    let mut count = 0;
+    let expected_count = files.len() as u64;
+    for file in files {
+        let file_path = src_dir_path.join(file.as_str());
+        tokio::fs::remove_file(file_path).await?;
+        count += 1;
+    }
+    if count == expected_count {
+        return Ok(count);
+    } else {
+        return Err(Error::new(
+            ErrorKind::Interrupted,
+            format!("Unable to remove files! Expected removed {} files, but removed {} files.",
+            expected_count, count
+        )));
+    }
+}
+
+async fn __move_files(files: Iter<'_, String>, src_dir_path: &PathBuf, dest_dir_path: &PathBuf) -> tokio::io::Result<u64> {
+    let files_to_remove = files.clone();
+    match __copy_files(files, src_dir_path, dest_dir_path).await {
+        Ok(_) => {
+            __remove_files(files_to_remove, &src_dir_path).await
+        },
+        Err(e) => Err(e)
+    }
+}
+
 // pub async fn handler_upload_dset(
 //     State(multi_state): State<MultiState>,
 //     RoutePath((user_id, file_name)): RoutePath<(String, String)>,
@@ -115,16 +186,3 @@ pub async fn handler_upload_pic(
 //     .await
 //     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))
 // }
-
-pub fn path_is_valid(path: &str) -> bool {
-    let path = std::path::Path::new(path);
-    let mut components = path.components().peekable();
-
-    if let Some(first) = components.peek() {
-        if !matches!(first, std::path::Component::Normal(_)) {
-            return false;
-        }
-    }
-
-    components.count() == 1
-}

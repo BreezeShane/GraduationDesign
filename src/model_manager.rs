@@ -1,11 +1,11 @@
-use std::{env, fs, io::{Error, ErrorKind}, path::PathBuf, slice::Iter};
+use std::{env, fs};
 
 use axum::{extract::State, http::StatusCode, Form, Json};
 use chrono::{DateTime, Local};
 use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 
-use crate::{authenticator::{check_permission, Permission}, config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH}, io_cache::path_is_valid, MultiState};
+use crate::{authenticator::{check_permission, Permission}, io_agent::{backup_models, path_is_valid, remove_models}, MultiState};
 
 #[derive(Deserialize, Serialize)]
 pub struct RequestFetchModels {
@@ -80,45 +80,16 @@ pub async fn handler_file_operation(
     let files2operate: Vec<String> = serde_json::from_str(file_operation_request.files2operate.as_str()).unwrap();
     match operation_type {
         "backup" => {
-            let write_bytes = __backup_models(files2operate.iter()).map_err(|err| (StatusCode::CONFLICT, format!("Failed to backup files! Get Error: {err}").to_owned())).await?;
+            let write_bytes = backup_models(files2operate.iter()).map_err(|err| (StatusCode::CONFLICT, format!("Failed to backup files! Get Error: {err}").to_owned())).await?;
             return Ok(format!("File operations finished! Written {write_bytes} bytes!"));
         },
         "remove" => {
-            let count_of_files = __remove_models(files2operate.iter()).map_err(|err| (StatusCode::CONFLICT, format!("Failed to backup files! Get Error: {err}").to_owned())).await?;
+            let count_of_files = remove_models(files2operate.iter()).map_err(|err| (StatusCode::CONFLICT, format!("Failed to backup files! Get Error: {err}").to_owned())).await?;
             return Ok(format!("File operations finished! Removed {count_of_files} files!"));
         },
         _ => {
             return Err((StatusCode::FORBIDDEN, "Operation was not permitted or implemented! Only support backup and remove files.".to_string()));
         }
-    }
-}
-
-async fn __backup_models(files: Iter<'_, String>) -> tokio::io::Result<u64> {
-    let src_dir_path = PathBuf::from(MODEL_STORED_PATH);
-    let dest_dir_path = PathBuf::from(MODEL_BACKUP_STORED_PATH);
-    let mut total_write = 0;
-    for file in files {
-        let src_path = src_dir_path.join(file.as_str());
-        let dest_path = dest_dir_path.join(file.as_str());
-        let write_bytes = tokio::fs::copy(src_path, dest_path).await?;
-        total_write += write_bytes;
-    }
-    return Ok(total_write);
-}
-
-async fn __remove_models(files: Iter<'_, String>) -> tokio::io::Result<u64, > {
-    let src_dir_path = PathBuf::from(MODEL_STORED_PATH);
-    let mut count = 0;
-    let expected_count = files.len() as u64;
-    for file in files {
-        let file_path = src_dir_path.join(file.as_str());
-        tokio::fs::remove_file(file_path).await?;
-        count += 1;
-    }
-    if count == expected_count {
-        return Ok(count);
-    } else {
-        return Err(Error::new(ErrorKind::Interrupted, "Unable to remove files!"));
     }
 }
 
