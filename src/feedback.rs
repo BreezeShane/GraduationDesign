@@ -11,11 +11,11 @@ use serde::{Deserialize, Serialize};
 use tokio_postgres::row::Row;
 
 use crate::authenticator::{check_permission, Permission};
-use crate::io_agent::{create_and_write_label_file, generate_new_file_name, move_image_in_fb, obtain_dir, rename_file};
+use crate::io_agent::{create_and_write_label_file, generate_new_file_name, _move_image_in_fb, obtain_dir, _rename_file};
 use crate::config::{DATA_TO_TRAIN_DIRECTORY, FEEDBACK_EXPIRATION, TFEEDBACK_STORED_DIRECTORY, UFEEDBACK_STORED_DIRECTORY};
 use crate::MultiState;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct  FeedbackFileUnit {
     filename: String,
     label: Option<String>
@@ -24,7 +24,7 @@ pub struct  FeedbackFileUnit {
 #[derive(Serialize, Deserialize)]
 pub struct  RequestFeedback {
     useremail: String,
-    file_with_label_list: Vec<FeedbackFileUnit>
+    file_with_label_list: String
 }
 
 #[derive(Serialize, Deserialize)]
@@ -86,15 +86,16 @@ pub async fn handler_subm_fb(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
+    let files_with_label: Vec<FeedbackFileUnit> = serde_json::from_str(&user_feedback.file_with_label_list).unwrap();
     let client = multi_state.db_pool.get().await.unwrap();
-    let files_with_label = user_feedback.file_with_label_list;
+
     for item in files_with_label.iter() {
-        let feedback_for_submission = __generate_feedback(item, useremail.as_str()).await.unwrap();
+        let feedback_for_submission = __generate_feedback_and_move_file(item, useremail.as_str()).await.unwrap();
         let insert_statement = __generate_insert_statement(item);
         let params = __generate_params(&feedback_for_submission);
 
         let feedback_statement = client
-            .prepare(&insert_statement).await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+            .prepare(insert_statement.as_str()).await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
         let rows = client
             .execute(&feedback_statement, &params)
@@ -181,7 +182,7 @@ pub async fn handler_acc_rej_fb(
 
     for file in files_with_label.iter() {
         if file.accept {
-            move_image_in_fb(
+            _move_image_in_fb(
                 file.pic_path.as_str(),
                 &tfeedback_dir_path,
                 &data_to_train_dir_path
@@ -253,7 +254,7 @@ pub async fn handler_label_pic(
         );
     }
     let ufeedback_dir_path = PathBuf::from(UFEEDBACK_STORED_DIRECTORY);
-    let files_with_label = request_feedback.file_with_label_list;
+    let files_with_label: Vec<FeedbackFileUnit> = serde_json::from_str(&request_feedback.file_with_label_list).unwrap();
     let client = multi_state.db_pool.get().await.unwrap();
 
     let query_statement = client
@@ -364,22 +365,17 @@ pub async fn handler_label_pic(
     Ok(())
 }
 
-async fn __generate_feedback(file_unit: &FeedbackFileUnit, useremail: &str) -> Result<Feedback, std::io::Error> {
+async fn __generate_feedback_and_move_file(file_unit: &FeedbackFileUnit, useremail: &str) -> Result<Feedback, std::io::Error> {
     let ufeedback_dir_path = PathBuf::from(UFEEDBACK_STORED_DIRECTORY);
     let tfeedback_dir_path = PathBuf::from(TFEEDBACK_STORED_DIRECTORY);
 
     let src_dir_path = PathBuf::from(obtain_dir(useremail).unwrap());
 
     if let Some(label) = file_unit.label.to_owned() {
-        let result = move_image_in_fb(file_unit.filename.as_str(), &src_dir_path, &tfeedback_dir_path).await;
-        if let Err(e) = result {
-            return  Err(e);
-        }
+        // TODO : Check if feedback uploaded exists
+        _move_image_in_fb(file_unit.filename.as_str(), &src_dir_path, &tfeedback_dir_path).await?;
         let new_file_name = generate_new_file_name(useremail, file_unit.filename.as_str());
-        let result = rename_file(file_unit.filename.as_str(), new_file_name.as_str(), &src_dir_path).await;
-        if let Err(e) = result {
-            return Err(e);
-        }
+        _rename_file(file_unit.filename.as_str(), new_file_name.as_str(), &tfeedback_dir_path).await?;
 
         return Ok(Feedback {
             timestamp: Local::now().timestamp(),
@@ -391,15 +387,10 @@ async fn __generate_feedback(file_unit: &FeedbackFileUnit, useremail: &str) -> R
             acceptable: false
         })
     } else {
-        let result = move_image_in_fb(file_unit.filename.as_str(), &src_dir_path, &ufeedback_dir_path).await;
-        if let Err(e) = result {
-            return  Err(e);
-        }
+        // TODO : Check if feedback uploaded exists
+        _move_image_in_fb(file_unit.filename.as_str(), &src_dir_path, &ufeedback_dir_path).await?;
         let new_file_name = generate_new_file_name(useremail, file_unit.filename.as_str());
-        let result = rename_file(file_unit.filename.as_str(), new_file_name.as_str(), &src_dir_path).await;
-        if let Err(e) = result {
-            return Err(e);
-        }
+        _rename_file(file_unit.filename.as_str(), new_file_name.as_str(), &ufeedback_dir_path).await?;
 
         return Ok(Feedback {
             timestamp: Local::now().timestamp(),
@@ -417,14 +408,14 @@ fn __generate_insert_statement(file_unit: &FeedbackFileUnit) -> String {
     let stmt = match file_unit.label {
         Some(_) => {
             "
-                INSERT INTO TFeedback (time_stamp, from_user_id, time_out, pic_link, real_label, acceptable)
+                INSERT INTO TFeedback (time_stamp, from_user_email, time_out, pic_link, real_label, acceptable)
                 VALUES
                 ($1, $2, $3, $4, $5, $6)
             "
         },
         None => {
             "
-                INSERT INTO UFeedback (time_stamp, from_user_id, pic_link, acceptable)
+                INSERT INTO UFeedback (time_stamp, from_user_email, pic_link, acceptable)
                 VALUES
                 ($1, $2, $3, $4)
             "

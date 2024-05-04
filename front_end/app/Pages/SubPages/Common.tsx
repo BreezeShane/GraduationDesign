@@ -55,9 +55,8 @@ const Common: React.FC<{ messageClient: NotificationInstance }> = (props) => {
         }
         axios.post('/user/subm_fb', {
             useremail: sessionStorage.getItem('useremail'),
-            file_with_label_list,
-        })
-        .then(function (res) {
+            file_with_label_list: JSON.stringify(file_with_label_list),
+        }).then(function (res) {
             messageClient.success({
                 message: `Succeeded to submit feedback!`,
                 description: `Thank you very much for your precious feedback! Returned response: ${res}`,
