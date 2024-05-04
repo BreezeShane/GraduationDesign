@@ -1,5 +1,6 @@
-use axum::extract::State;
-use tokio::{fs::File, io::AsyncWriteExt};
+use axum::{extract::{Query, State}, response::{IntoResponse, Response}};
+use serde::{Deserialize, Serialize};
+use tokio::{fs::File, io::{AsyncReadExt, AsyncWriteExt}};
 use std::fs::create_dir;
 use axum::{
     extract::{Multipart, Path as RoutePath},
@@ -7,11 +8,34 @@ use axum::{
 };
 use std::{io::{Error, ErrorKind}, path::{Path, PathBuf}, slice::Iter};
 
-use crate::config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH, USER_PIC_PATH};
+use crate::config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH, UFEEDBACK_STORED_DIRECTORY, USER_PIC_PATH};
 use crate::authenticator::{check_permission, Permission};
 use crate::MultiState;
 
-pub fn path_is_valid(path: &str) -> bool {
+#[derive(Serialize, Deserialize)]
+pub struct RequestImageFetch {
+    useremail: String,
+    image_name: String
+}
+
+pub async fn handler_fetch_image(
+    State(multi_state): State<MultiState>,
+    Query(request_image_fetch): Query<RequestImageFetch>
+) -> Result<Response, (StatusCode, String)> {
+    if !check_permission(&multi_state.db_pool, &request_image_fetch.useremail, Permission::Common).await.unwrap() {
+        return Err(
+            (StatusCode::FORBIDDEN, "Not permitted!".to_string())
+        );
+    }
+    let image_pathbuf = PathBuf::from(UFEEDBACK_STORED_DIRECTORY).join(request_image_fetch.image_name);
+    let mut image_file_handle = tokio::fs::File::open(&image_pathbuf).await.unwrap();
+    let mut buffer = vec![];
+    image_file_handle.read_to_end(&mut buffer).await.unwrap();
+
+    Ok(buffer.into_response())
+}
+
+pub fn _path_is_valid(path: &str) -> bool {
     let path = std::path::Path::new(path);
     let mut components = path.components().peekable();
 
@@ -24,13 +48,13 @@ pub fn path_is_valid(path: &str) -> bool {
     components.count() == 1
 }
 
-pub fn obtain_dir(user_email: &str) -> Result<String, std::ffi::OsString>{
+pub fn _obtain_dir(user_email: &str) -> Result<String, std::ffi::OsString>{
     let path_buffer = __obtain_dir(user_email).unwrap();
     path_buffer.into_os_string().into_string()
 }
 
 fn __obtain_dir(user_email: &str) -> Result<PathBuf, String> {
-    let user_dir_name = generate_user_folder_name(user_email);
+    let user_dir_name = _generate_user_folder_name(user_email);
 
     let path = Path::new(USER_PIC_PATH);
     let user_dir_path = path.join(user_dir_name);
@@ -48,12 +72,12 @@ fn __obtain_dir(user_email: &str) -> Result<PathBuf, String> {
     return Ok(user_dir_path);
 }
 
-pub fn generate_user_folder_name(user_email: &str) -> String {
+pub fn _generate_user_folder_name(user_email: &str) -> String {
     hex::encode(user_email).to_owned()
 }
 
-pub fn generate_new_file_name(user_email: &str, file_name: &str) -> String {
-    let mut new_file_name = generate_user_folder_name(user_email);
+pub fn _generate_new_file_name(user_email: &str, file_name: &str) -> String {
+    let mut new_file_name = _generate_user_folder_name(user_email);
     new_file_name.push_str("_");
     new_file_name.push_str(file_name);
     return new_file_name;

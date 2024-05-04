@@ -36,7 +36,7 @@ use tower_http::classify::ServerErrorsFailureClass;
 use tracing::{info, info_span, Level, Span};
 use tracing_subscriber::fmt::{format::Writer, time::FormatTime};
 
-use crate::{config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH}, dl_svc::handler_authenticate_ssh, model_manager::handler_file_operation, user_manager::handler_fetch_all_users};
+use crate::{config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH}, dl_svc::handler_authenticate_ssh, io_agent::handler_fetch_image, model_manager::handler_file_operation, user_manager::handler_fetch_all_users};
 
 // use axum_macros::debug_handler; // Important!
 
@@ -136,6 +136,7 @@ async fn main() {
         .route("/user/subm_fb", post(handler_subm_fb))
         .route("/user/infer", post(handler_infer))
         .route("/user/label_pic", get(handler_fetch_ufb).post(handler_label_pic))
+        .route("/fetch_image", get(handler_fetch_image))
 
         .route("/admin/feedback_manage", get(handler_fetch_all_fb).post(handler_acc_rej_fb))
         .route("/admin/user_manage", get(handler_fetch_all_users).post(handler_suspend_or_unsuspend_user))
