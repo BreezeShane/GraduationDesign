@@ -1,5 +1,4 @@
 use axum::extract::State;
-use base64::{prelude::BASE64_URL_SAFE, Engine};
 use tokio::{fs::File, io::AsyncWriteExt};
 use std::fs::create_dir;
 use axum::{
@@ -50,7 +49,7 @@ fn __obtain_dir(user_email: &str) -> Result<PathBuf, String> {
 }
 
 pub fn generate_user_folder_name(user_email: &str) -> String {
-    BASE64_URL_SAFE.encode(user_email).to_owned()
+    hex::encode(user_email).to_owned()
 }
 
 pub fn generate_new_file_name(user_email: &str, file_name: &str) -> String {
@@ -103,31 +102,19 @@ pub async fn remove_models(files: Iter<'_, String>) -> tokio::io::Result<u64> {
     count
 }
 
-pub async fn move_image_in_fb(file_name: &str, src_dir_path: &PathBuf, dest_dir_path: &PathBuf) -> tokio::io::Result<u64> {
+pub async fn _move_image_in_fb(file_name: &str, src_dir_path: &PathBuf, dest_dir_path: &PathBuf) -> tokio::io::Result<u64> {
     let src_path = src_dir_path.join(file_name);
     let dest_path = dest_dir_path.join(file_name);
-    let result = tokio::fs::copy(src_dir_path, dest_path).await;
-    if let Ok(_) = result {
-        let result = tokio::fs::remove_file(src_path).await;
-        match result {
-            Ok(()) => return Ok(1),
-            Err(e) => return Err(e)
-        }
-    } else {
-        return Err(Error::new(
-            ErrorKind::Interrupted,
-            format!("Unable to move file named {}!",
-            file_name
-        )));
-    }
+    tokio::fs::copy(&src_path, dest_path).await?;
+    tokio::fs::remove_file(&src_path).await?;
+    Ok(1)
 }
 
-pub async fn rename_file(current_file_name: &str, new_file_name: &str, src_dir_path: &PathBuf) -> Result<(), Error> {
+pub async fn _rename_file(current_file_name: &str, new_file_name: &str, src_dir_path: &PathBuf) -> Result<(), Error> {
     let src_path = src_dir_path.join(current_file_name);
     let dest_path = src_dir_path.join(new_file_name);
 
-    let result = tokio::fs::rename(src_path, dest_path).await;
-    return result;
+    tokio::fs::rename(src_path, dest_path).await
 }
 
 pub async fn create_and_write_label_file(file_name: &str, input_data: &[u8], dest_dir_path: &PathBuf)  -> tokio::io::Result<()> {
@@ -153,6 +140,9 @@ async fn __remove_files(files: Iter<'_, String>, src_dir_path: &PathBuf) -> toki
     let expected_count = files.len() as u64;
     for file in files {
         let file_path = src_dir_path.join(file.as_str());
+
+        tracing::warn!("Removing the file locate at {:#?}", file_path);
+
         tokio::fs::remove_file(file_path).await?;
         count += 1;
     }
