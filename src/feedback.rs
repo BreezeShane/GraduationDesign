@@ -8,10 +8,12 @@ use axum::{extract::State, http::StatusCode, Form};
 use deadpool_postgres::Pool;
 use postgres::types::ToSql;
 use serde::{Deserialize, Serialize};
+use tokio_pg_mapper::FromTokioPostgresRow;
+use tokio_pg_mapper_derive::PostgresMapper;
 use tokio_postgres::row::Row;
 
 use crate::authenticator::{check_permission, Permission};
-use crate::io_agent::{create_and_write_label_file, generate_new_file_name, _move_image_in_fb, obtain_dir, _rename_file};
+use crate::io_agent::{create_and_write_label_file, _generate_new_file_name, _move_image_in_fb, _obtain_dir, _rename_file};
 use crate::config::{DATA_TO_TRAIN_DIRECTORY, FEEDBACK_EXPIRATION, TFEEDBACK_STORED_DIRECTORY, UFEEDBACK_STORED_DIRECTORY};
 use crate::MultiState;
 
@@ -25,6 +27,21 @@ pub struct  FeedbackFileUnit {
 pub struct  RequestFeedback {
     useremail: String,
     file_with_label_list: String
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct  RequestLabelImage {
+    useremail: String,
+    image_name: String,
+    image_label: String
+}
+
+#[derive(Serialize, Deserialize, PostgresMapper)]
+#[pg_mapper (table = "UFeedback")]
+pub struct LabelImageUnit {
+    pic_link: String,
+    real_label: String,
+    submit_count: i64
 }
 
 #[derive(Serialize, Deserialize)]
@@ -50,6 +67,12 @@ pub struct Feedback {
     real_label: Option<String>,
     submit_count: i64,
     acceptable: bool
+}
+
+#[derive(Serialize, Deserialize, Debug, PostgresMapper)]
+#[pg_mapper(table = "UFeedback")]
+pub struct ResponseFeedbackUnit {
+    pic_link: String,
 }
 
 #[derive(Deserialize)]
@@ -237,7 +260,21 @@ pub async fn handler_fetch_ufb(
         );
     }
 
-    let vec_ufbs =  __fetch_fb(&multi_state.db_pool, false).await;
+    let client = multi_state.db_pool.get().await.unwrap();
+    let query_tfb_statement = client
+        .prepare("
+            SELECT pic_link FROM UFeedback;
+        ")
+        .await
+        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string())).unwrap();
+
+    let vec_ufbs = client
+        .query(&query_tfb_statement, &[])
+        .await
+        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string())).unwrap()
+        .iter()
+        .map(|row| ResponseFeedbackUnit::from_row_ref(row).unwrap())
+        .collect::<Vec<ResponseFeedbackUnit>>();
 
     return Ok(
         Json(vec_ufbs).into_response()
@@ -246,29 +283,28 @@ pub async fn handler_fetch_ufb(
 
 pub async fn handler_label_pic(
     State(multi_state): State<MultiState>,
-    Form(request_feedback): Form<RequestFeedback>
+    Form(request_label_image): Form<RequestLabelImage>
 ) -> Result<(), (StatusCode, String)> {
-    if !check_permission(&multi_state.db_pool, &request_feedback.useremail, Permission::Common).await.unwrap() {
+    if !check_permission(&multi_state.db_pool, &request_label_image.useremail, Permission::Common).await.unwrap() {
         return Err(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
-    let ufeedback_dir_path = PathBuf::from(UFEEDBACK_STORED_DIRECTORY);
-    let files_with_label: Vec<FeedbackFileUnit> = serde_json::from_str(&request_feedback.file_with_label_list).unwrap();
+    let image_pathbuf = PathBuf::from(UFEEDBACK_STORED_DIRECTORY).join(&request_label_image.image_name);
     let client = multi_state.db_pool.get().await.unwrap();
 
     let query_statement = client
         .prepare("
             SELECT pic_link, real_label, submit_count FROM TFeedback
             WHERE
-            pic_link='$1' AND real_label='$2'
+            pic_link=$1 AND real_label=$2
         ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
     let update_statement = client
         .prepare("
             UPDATE TFeedback
             SET submit_count=$1
-            WHERE pic_link='$2'
+            WHERE pic_link=$2
         ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
     let insert_statement = client
@@ -278,103 +314,68 @@ pub async fn handler_label_pic(
             ($1, $2, $3, $4, $5, $6, $7)
         ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
-    for file in files_with_label.iter() {
-        if let None = file.label {
-            return Err((StatusCode::CONFLICT, "Not set enough label!".to_string()));
-        }
+    let src_path = image_pathbuf.as_os_str().to_str().unwrap();
 
-        let ufb_dir_pathbuf = ufeedback_dir_path.join(file.filename.as_str());
-        let src_path = ufb_dir_pathbuf.as_os_str().to_str().unwrap();
+    let query_row = client
+        .query(&query_statement, &[&src_path, &request_label_image.image_label])
+        .await
+        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
+        .iter()
+        .map(|row| LabelImageUnit::from_row_ref(row).unwrap())
+        .collect::<Vec<LabelImageUnit>>()
+        .pop();
 
+    match query_row {
+        Some(label_image_unit) => {
+            let new_count = label_image_unit.submit_count + 1;
+            let update_row = client
+                .execute(&update_statement, &[&new_count, &label_image_unit.pic_link])
+                .await
+                .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+            if update_row > 0 {
+                return Ok(());
+            } else {
+                return Err((StatusCode::NOT_MODIFIED, "Failed to update the record!".to_string()));
+            }
+        },
+        None => {
+            let feedback = Feedback {
+                timestamp: Local::now().timestamp(),
+                from_user_email: request_label_image.useremail.to_owned(),
+                time_out: Some(Local::now().timestamp() + FEEDBACK_EXPIRATION),
+                pic_link: src_path.to_owned(),
+                real_label: Some(request_label_image.image_label.to_owned()),
+                submit_count: 0,
+                acceptable: false
+            };
 
-        let feedback = Feedback {
-            timestamp: Local::now().timestamp(),
-            from_user_email: request_feedback.useremail.to_owned(),
-            time_out: Some(Local::now().timestamp() + FEEDBACK_EXPIRATION),
-            pic_link: src_path.to_owned(),
-            real_label: file.label.to_owned(),
-            submit_count: 0,
-            acceptable: false
-        };
+            let insert_row = client
+                .execute(&insert_statement, &[
+                    &feedback.timestamp, &feedback.from_user_email, &feedback.time_out,
+                    &feedback.pic_link, &feedback.real_label, &feedback.submit_count, &feedback.acceptable
+                ])
+                .await
+                .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
 
-        let query_row = client
-            .query(&query_statement, &[&feedback.pic_link, &feedback.real_label])
-            .await
-            .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
-            .iter()
-            .map(|row| Feedback::from_row_ref(row, false))
-            .collect::<Vec<Feedback>>()
-            .pop();
-
-        match query_row {
-            Some(fb) => {
-                let new_count = fb.submit_count + 1;
-                let update_row = client
-                    .execute(&update_statement, &[&new_count, &fb.pic_link])
-                    .await
-                    .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
-                if update_row > 0 {
-                    return Ok(());
-                } else {
-                    return Err((StatusCode::NOT_MODIFIED, "Failed to update the record!".to_string()));
-                }
-            },
-            None => {
-                let insert_row = client
-                    .execute(&insert_statement, &[
-                        &feedback.timestamp, &feedback.from_user_email, &feedback.time_out,
-                        &feedback.pic_link, &feedback.real_label, &feedback.submit_count, &feedback.acceptable
-                    ])
-                    .await
-                    .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
-
-                if insert_row > 0 {
-                    return Ok(());
-                } else {
-                    return Err((StatusCode::NOT_MODIFIED, "Failed to update the record!".to_string()));
-                }
+            if insert_row > 0 {
+                return Ok(());
+            } else {
+                return Err((StatusCode::NOT_MODIFIED, "Failed to update the record!".to_string()));
             }
         }
     }
-
-
-    // let insert_row = client
-    //         .execute(&insert_statement,
-    //             &[
-    //                 &fb.timestamp, &fb.from_user_email, &fb.time_out,
-    //                 &fb.pic_link, &fb.real_label, &fb.acceptable
-    //             ])
-    //         .await
-    //         .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()));
-
-    // if let Ok(ins_count) = insert_row {
-    //     if ins_count < 1 {
-    //         return Err((StatusCode::NOT_MODIFIED, "Failed to insert new trainable feedback!".to_string()));
-    //     }
-    //     let delet_row = client
-    //     .execute(&del_statement,
-    //         &[
-    //             &fb.pic_link
-    //         ])
-    //     .await
-    //     .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
-    //     if delet_row < 1 {
-    //         return Err((StatusCode::NOT_MODIFIED, "Failed to delete original untrainable feedback!".to_string()));
-    //     }
-    // }
-    Ok(())
 }
 
 async fn __generate_feedback_and_move_file(file_unit: &FeedbackFileUnit, useremail: &str) -> Result<Feedback, std::io::Error> {
     let ufeedback_dir_path = PathBuf::from(UFEEDBACK_STORED_DIRECTORY);
     let tfeedback_dir_path = PathBuf::from(TFEEDBACK_STORED_DIRECTORY);
 
-    let src_dir_path = PathBuf::from(obtain_dir(useremail).unwrap());
+    let src_dir_path = PathBuf::from(_obtain_dir(useremail).unwrap());
 
     if let Some(label) = file_unit.label.to_owned() {
         // TODO : Check if feedback uploaded exists
         _move_image_in_fb(file_unit.filename.as_str(), &src_dir_path, &tfeedback_dir_path).await?;
-        let new_file_name = generate_new_file_name(useremail, file_unit.filename.as_str());
+        let new_file_name = _generate_new_file_name(useremail, file_unit.filename.as_str());
         _rename_file(file_unit.filename.as_str(), new_file_name.as_str(), &tfeedback_dir_path).await?;
 
         return Ok(Feedback {
@@ -389,7 +390,7 @@ async fn __generate_feedback_and_move_file(file_unit: &FeedbackFileUnit, userema
     } else {
         // TODO : Check if feedback uploaded exists
         _move_image_in_fb(file_unit.filename.as_str(), &src_dir_path, &ufeedback_dir_path).await?;
-        let new_file_name = generate_new_file_name(useremail, file_unit.filename.as_str());
+        let new_file_name = _generate_new_file_name(useremail, file_unit.filename.as_str());
         _rename_file(file_unit.filename.as_str(), new_file_name.as_str(), &ufeedback_dir_path).await?;
 
         return Ok(Feedback {

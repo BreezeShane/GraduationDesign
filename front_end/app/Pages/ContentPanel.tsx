@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Tabs, ConfigProvider, TabPaneProps } from 'antd';
+import { Tabs, ConfigProvider } from 'antd';
 import React, { ReactNode, useEffect, useState } from 'react';
 import { NotificationInstance } from 'antd/es/notification/interface';
 
@@ -11,6 +11,7 @@ import UserInfo from './SubPages/UserInfo';
 import UserManage from './SubPages/UserManage';
 import ModelManage from './SubPages/ModelManage';
 import FeedbackManage from './SubPages/FeedbackManage';
+import LabelData from './SubPages/LabelData';
 
 const { TabPane } = Tabs;
 
@@ -79,27 +80,28 @@ const ContentPanel: React.FC<{signStatus: boolean, messageClient: NotificationIn
       // All User
       generateItem("Main Page", "0", <Common messageClient={messageClient} />),
       generateItem("User Info", "1", <UserInfo messageClient={messageClient} />),
+      generateItem("Label Image", "2", <LabelData messageClient={messageClient} />),
     ]
     if (checkRole(user_role) == Role.UserAdmin) {
       Pages.push(
         // User Admin
-        generateItem("User Manage", "2", <UserManage messageClient={messageClient} />),
-        generateItem("Feedback Manage", "3", <FeedbackManage messageClient={messageClient} />),
+        generateItem("User Manage", "3", <UserManage messageClient={messageClient} />),
+        generateItem("Feedback Manage", "4", <FeedbackManage messageClient={messageClient} />),
       );
     } else if (checkRole(user_role) == Role.ModelAdmin) {
       Pages.push(
         // Model Admin
-        generateItem("Model Manage", "4", <ModelManage />),
-        generateItem("WebSSH", "5", <WebSSH messageClient={messageClient} />),
-        generateItem("Frequent Commands", "6", <Commands messageClient={messageClient} />),
+        generateItem("Model Manage", "5", <ModelManage />),
+        generateItem("WebSSH", "6", <WebSSH messageClient={messageClient} />),
+        generateItem("Frequent Commands", "7", <Commands messageClient={messageClient} />),
       );
     } else if (checkRole(user_role) == Role.SuperRoot) { // onDebug
       Pages.push(
-        generateItem("User Manage", "2", <UserManage messageClient={messageClient} />),
-        generateItem("Feedback Manage", "3", <FeedbackManage messageClient={messageClient} />),
-        generateItem("Model Manage", "4", <ModelManage />),
-        generateItem("WebSSH", "5", <WebSSH messageClient={messageClient} />),
-        generateItem("Frequent Commands", "6", <Commands messageClient={messageClient} />),
+        generateItem("User Manage", "3", <UserManage messageClient={messageClient} />),
+        generateItem("Feedback Manage", "4", <FeedbackManage messageClient={messageClient} />),
+        generateItem("Model Manage", "5", <ModelManage />),
+        generateItem("WebSSH", "6", <WebSSH messageClient={messageClient} />),
+        generateItem("Frequent Commands", "7", <Commands messageClient={messageClient} />),
       )
     }
   } else {

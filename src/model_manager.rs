@@ -5,7 +5,7 @@ use chrono::{DateTime, Local};
 use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 
-use crate::{authenticator::{check_permission, Permission}, io_agent::{backup_models, path_is_valid, remove_models}, MultiState};
+use crate::{authenticator::{check_permission, Permission}, io_agent::{backup_models, _path_is_valid, remove_models}, MultiState};
 
 #[derive(Deserialize, Serialize)]
 pub struct RequestFetchModels {
@@ -40,7 +40,7 @@ pub async fn handler_fetch_all_models(
             (StatusCode::FORBIDDEN, "Not permitted!".to_string())
         );
     }
-    if !path_is_valid(&request.request_dir) {
+    if !_path_is_valid(&request.request_dir) {
         return Err((StatusCode::BAD_REQUEST, "Invalid path".to_owned()));
     }
     let mut file_list: Vec<FileMetadata> = Vec::new();

@@ -59,7 +59,7 @@ const Common: React.FC<{ messageClient: NotificationInstance }> = (props) => {
         }).then(function (res) {
             messageClient.success({
                 message: `Succeeded to submit feedback!`,
-                description: `Thank you very much for your precious feedback! Returned response: ${res}`,
+                description: `Thank you very much for your precious feedback! Returned response: ${res.data}`,
                 placement: 'topLeft',
                 duration: 2,
             });
