@@ -73,7 +73,7 @@ const ContentPanel: React.FC<{signStatus: boolean, messageClient: NotificationIn
             duration: 2,
           });
         }
-      });
+    });
 
     Pages = [
       // All User

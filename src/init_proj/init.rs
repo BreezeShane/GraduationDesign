@@ -51,6 +51,7 @@ fn main() -> Result<(), Error> {
     const DATASETS_DIRECTORY: &str = "./datasets/";
     const MODEL_STORED_PATH: &str = "./models/";
     const MODEL_BACKUP_STORED_PATH: &str = "./.modbak/";
+    const TFEEDBACK_STORED_DIRECTORY: &str = "./tfeedback/";
     const UFEEDBACK_STORED_DIRECTORY: &str = "./ufeedback/";
     const DATA_TO_TRAIN_DIRECTORY: &str = "./data2train/";
     let vec_path = vec![
@@ -58,6 +59,7 @@ fn main() -> Result<(), Error> {
         DATASETS_DIRECTORY,
         MODEL_STORED_PATH,
         MODEL_BACKUP_STORED_PATH,
+        TFEEDBACK_STORED_DIRECTORY,
         UFEEDBACK_STORED_DIRECTORY,
         DATA_TO_TRAIN_DIRECTORY
     ];
