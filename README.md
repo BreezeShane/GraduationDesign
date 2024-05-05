@@ -49,18 +49,26 @@
 │   │   │   │   ├── SignInButton.tsx
 │   │   │   │   ├── SignOutButton.tsx
 │   │   │   │   └── SignUpButton.tsx
-│   │   │   ├── ContentPanel.tsx
+│   │   │   ├── FileManage.tsx
 │   │   │   ├── NavBar.tsx
+│   │   │   ├── ResultPagePanel.tsx
 │   │   │   └── UploadImage.tsx
 │   │   ├── favicon.ico
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   ├── page.module.css
 │   │   ├── Pages
-│   │   │   ├── Common.tsx
-│   │   │   ├── ModelAdmin.tsx
-│   │   │   ├── UserAdmin.tsx
-│   │   │   └── UserInfo.tsx
+│   │   │   ├── ContentPanel.tsx
+│   │   │   └── SubPages
+│   │   │       ├── commands.json
+│   │   │       ├── Commands.tsx
+│   │   │       ├── Common.tsx
+│   │   │       ├── FeedbackManage.tsx
+│   │   │       ├── LabelData.tsx
+│   │   │       ├── ModelManage.tsx
+│   │   │       ├── UserInfo.tsx
+│   │   │       ├── UserManage.tsx
+│   │   │       └── WebSSH.tsx
 │   │   ├── page.tsx
 │   │   ├── Types.ts
 │   │   └── Utils.tsx
@@ -76,24 +84,26 @@
 ├── manager.py
 ├── README.md
 ├── requirements.txt
-└── src
-    ├── authenticator.rs
-    ├── config.rs
-    ├── daemon.rs
-    ├── dl_svc.rs
-    ├── doc_database.rs
-    ├── feedback.rs
-    ├── init_proj
-    │   └── init.rs
-    ├── io_cache.rs
-    ├── main.rs
-    ├── model_manager.rs
-    ├── ssh_socket
-    │   ├── client.rs
-    │   └── server.rs
-    └── user_manager.rs
+├── src
+│   ├── authenticator.rs
+│   ├── config.rs
+│   ├── daemon.rs
+│   ├── dl_svc.rs
+│   ├── doc_database.rs
+│   ├── feedback.rs
+│   ├── init_proj
+│   │   └── init.rs
+│   ├── io_agent.rs
+│   ├── main.rs
+│   ├── model_manager.rs
+│   ├── ssh_socket
+│   │   ├── client.rs
+│   │   └── server.rs
+│   └── user_manager.rs
+├── SSH-KeyGen.sh
+└── SSHwifty.yml
 
-19 directories, 70 files</code>
+20 directories, 79 files</code>
 </pre>
 </details>
 
@@ -117,7 +127,43 @@ createdb InsectSys
 cargo run --bin init # Initialize database.
 ```
 
-### CUDA == v11.7 (Not ensured to support newer version)
+### Sshwifty [[Reference]](https://github.com/nirui/sshwifty) + Docker + Docker-compose
+
+The deeplearning server should deploy up SSH wifty server based on Go-lang.
+
+For the project, you could run the command to install & start docker service:
+```shell
+docker-compose -f SSHwifty.yml up -d
+```
+And you could run the command to stop docker service:
+```shell
+docker-compose -f SSHwifty.yml stop
+```
+If you would like to stop and remove the docker service, run this:
+```shell
+docker-compose -f SSHwifty.yml down
+```
+
+The expected run result should be like here:
+```shell
+❯ docker-compose -f SSHwifty.yml up -d
+[+] Running 5/5
+ ✔ sshwifty Pulled                                                                                                                    1935.4s
+   ✔ 4abcf2066143 Already exists                                                                                                         0.0s
+   ✔ bdaaca02b8af Pull complete                                                                                                       1175.2s
+   ✔ 17dda63926e9 Pull complete                                                                                                       1919.3s
+   ✔ 0360c3b1c676 Pull complete                                                                                                       1919.3s
+[+] Running 2/2
+ ✔ Network proj_default  Created                                                                                                         0.1s
+ ✔ Container sshwifty    Started                                                                                                         0.6s
+```
+
+If it's need to use RSA to secure the connection to deeplearning server, you could simply run the shell `SSH-KeyGen.sh`:
+```shell
+sh ./SSH-KeyGen.sh
+```
+
+### CUDA == v11.7 (Not ensured to support newer version) **[On dev]**
 
 In general, the deep learning would support higher version, as long as DeepSpeed supports PyTorch and PyTorch supports the relative CUDA.
 

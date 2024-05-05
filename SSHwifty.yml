@@ -1,0 +1,7 @@
+services:
+    sshwifty:
+        restart: always
+        ports:
+            - 8090:8182
+        container_name: sshwifty
+        image: 'niruix/sshwifty:latest'

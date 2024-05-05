@@ -25,4 +25,4 @@ pub const MODEL_STORED_PATH: &str = "./models/";
 pub const MODEL_BACKUP_STORED_PATH: &str = "./.modbak/";
 
 // dl_svc.rs
-pub const DL_SVC_HOST: &str = "https://localhost:8000";
+pub const DL_SVC_HOST: &str = "http://localhost:8090";

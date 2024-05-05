@@ -31,6 +31,7 @@ const WebSSH: React.FC<{ messageClient: NotificationInstance }> = (props) => {
                     placement: 'topLeft',
                     duration: 2,
                 });
+                console.log(res.data);
                 setDestSSH(res.data);
             }
         }).catch((err) => {
