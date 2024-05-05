@@ -127,7 +127,7 @@ createdb InsectSys
 cargo run --bin init # Initialize database.
 ```
 
-### Sshwifty [[Reference]](https://github.com/nirui/sshwifty) + Docker + Docker-compose
+### SSH Wifty [[Reference]](https://github.com/nirui/sshwifty) + Docker + Docker-compose
 
 The deeplearning server should deploy up SSH wifty server based on Go-lang.
 
@@ -162,6 +162,8 @@ If it's need to use RSA to secure the connection to deeplearning server, you cou
 ```shell
 sh ./SSH-KeyGen.sh
 ```
+
+<center><strong>⚠️ To use SSH Wifty, you should ensure that the "sshd" daemon is running. Use <code>systemctl start sshd</code> to start sshd service.</strong></center>
 
 ### CUDA == v11.7 (Not ensured to support newer version) **[On dev]**
 
