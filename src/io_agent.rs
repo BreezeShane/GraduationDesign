@@ -141,6 +141,12 @@ pub async fn _rename_file(current_file_name: &str, new_file_name: &str, src_dir_
     tokio::fs::rename(src_path, dest_path).await
 }
 
+pub fn __generate_pic_label_file(pic_location: &str) -> String {
+    let mut label_file_pathbuf = PathBuf::from(pic_location);
+    label_file_pathbuf.set_extension("txt");
+    return label_file_pathbuf.to_str().unwrap().to_owned();
+}
+
 pub async fn create_and_write_label_file(file_name: &str, input_data: &[u8], dest_dir_path: &PathBuf)  -> tokio::io::Result<()> {
     let dest_path = dest_dir_path.join(file_name);
     let mut file = File::create(dest_path).await?;
