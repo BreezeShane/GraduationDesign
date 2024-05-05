@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import type { FormProps } from 'antd';
-import { Button, Form, Input, Modal, notification } from 'antd';
+import { Button, Form, Input, Modal, Space, notification } from 'antd';
 import { PlusCircleOutlined, UserOutlined, KeyOutlined, MailOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { NotificationInstance } from 'antd/es/notification/interface';
@@ -141,12 +141,14 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
 
 
           <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
-            <Button type="primary" htmlType="submit">
-              Submit
-            </Button>
-            <Button danger onClick={clearForm}>
-              Clear
-            </Button>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                Submit
+              </Button>
+              <Button danger onClick={clearForm}>
+                Clear
+              </Button>
+            </Space>
           </Form.Item>
         </Form>
       </Modal>
