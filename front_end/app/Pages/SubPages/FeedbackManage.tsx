@@ -7,11 +7,47 @@ import axios from 'axios';
 type TableRowSelection<T> = TableProps<T>['rowSelection'];
 
 interface DataType {
-  key: React.Key;
-  username: string,
-  useremail: string,
-  contribution: number,
+  datetime: string,
+  from_user_email: string,
+  pic_link: string,
+  real_label: string,
+  submit_count: number,
+  time_out: string,
+  acceptable: boolean
 }
+
+interface DataOperate {
+  pic_path: string,
+  real_label: string,
+  accept: boolean,
+}
+
+const columns: TableColumnsType<DataType> = [
+  {
+    title: 'Submission Datetime',
+    dataIndex: 'datetime',
+  },
+  {
+    title: 'User Email',
+    dataIndex: 'from_user_email',
+  },
+  {
+    title: 'Image Stored Location',
+    dataIndex: 'pic_link',
+  },
+  {
+    title: 'Expiration Datetime',
+    dataIndex: 'time_out',
+  },
+  {
+    title: 'Label',
+    dataIndex: 'real_label',
+  },
+  {
+    title: 'Count of Submission',
+    dataIndex: 'submit_count',
+  },
+];
 
 const FeedbackManage: React.FC<{messageClient: NotificationInstance}> = (props) => {
     const { messageClient } = props;
@@ -29,7 +65,6 @@ const FeedbackManage: React.FC<{messageClient: NotificationInstance}> = (props) 
         }
       }).then((res) => {
         let tfeedback = res.data;
-        console.log(tfeedback);
         setFeedbackList(tfeedback);
       }).catch((err) => {
         console.log("get files error: ", err)
@@ -74,36 +109,55 @@ const FeedbackManage: React.FC<{messageClient: NotificationInstance}> = (props) 
         ],
     };
 
-    const handleOperation = (record: DataType) => {
-      console.log(record.key); // 获取当前行的ID
-      console.log(record.username); // 获取当前行的Name
+    const handleAccept = () => {
+      let feedback2operate = feedbackList.filter((item) => {
+        return selectedRowKeys.indexOf(item.datetime) > -1;
+      });
+      let data = [];
+      for (let idx in feedback2operate) {
+        data.push({
+          pic_path: feedback2operate[idx].pic_link,
+          real_label: feedback2operate[idx].real_label,
+          acceptable: true,
+        })
+      }
+      axios.post("/admin/feedback_manage", {
+        useremail: sessionStorage.getItem("useremail"),
+        files_to_operate: JSON.stringify(data)
+      }).then((res) => {
+        console.log(res);
+      })
     }
 
-    const columns: TableColumnsType<DataType> = [
-      {
-        title: 'User Name',
-        dataIndex: 'username',
-      },
-      {
-        title: 'Email',
-        dataIndex: 'useremail',
-      },
-      {
-        title: 'Contributions',
-        dataIndex: 'contribution',
-      },
-      {
-        title: 'Operations',
-        render: (text, record) => (
-          <Space>
-            <Button onClick={() => handleOperation(record)} style={{ background: "red", borderColor: "yellow" }}></Button>
-            <Button onClick={() => handleOperation(record)} style={{ background: "red", borderColor: "yellow" }}></Button>
-          </Space>
-        ),
+    const handleReject = () => {
+      let feedback2operate = feedbackList.filter((item) => {
+        return selectedRowKeys.indexOf(item.datetime) > -1;
+      });
+      let data = [];
+      for (let idx in feedback2operate) {
+        data.push({
+          pic_path: feedback2operate[idx].pic_link,
+          real_label: feedback2operate[idx].real_label,
+          acceptable: false,
+        })
       }
-    ];
+      axios.post("/admin/feedback_manage", {
+        useremail: sessionStorage.getItem("useremail"),
+        files_to_operate: JSON.stringify(data)
+      }).then((res) => {
+        console.log(res);
+      })
+    }
 
-    return <Table rowSelection={rowSelection} columns={columns} dataSource={feedbackList} />;
+    return (
+      <>
+        <Space>
+            <Button onClick={handleAccept} size="large" style={{ background: "#3eb489", color: "#ffffff" }}>Accept</Button>
+            <Button onClick={handleReject} size="large" style={{ background: "#FF2323", color: "#ffffff" }} >Reject</Button>
+        </Space>
+        <Table rowKey={item => item.datetime} rowSelection={rowSelection} columns={columns} dataSource={feedbackList} />
+      </>
+    );
 };
 
 export default FeedbackManage;
