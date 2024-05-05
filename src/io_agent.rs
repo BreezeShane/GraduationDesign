@@ -126,11 +126,21 @@ pub async fn remove_models(files: Iter<'_, String>) -> tokio::io::Result<u64> {
     count
 }
 
-pub async fn _move_image_in_fb(file_name: &str, src_dir_path: &PathBuf, dest_dir_path: &PathBuf) -> tokio::io::Result<u64> {
+pub async fn _remove_file(file_name: &str, src_dir_path: &PathBuf) -> tokio::io::Result<u64> {
+    tokio::fs::remove_file(src_dir_path.join(file_name)).await?;
+    Ok(1)
+}
+
+pub async fn _copy_file(file_name: &str, src_dir_path: &PathBuf, dest_dir_path: &PathBuf) -> tokio::io::Result<u64> {
     let src_path = src_dir_path.join(file_name);
     let dest_path = dest_dir_path.join(file_name);
-    tokio::fs::copy(&src_path, dest_path).await?;
-    tokio::fs::remove_file(&src_path).await?;
+    let wirte_bytes = tokio::fs::copy(&src_path, dest_path).await?;
+    Ok(wirte_bytes)
+}
+
+pub async fn _move_file(file_name: &str, src_dir_path: &PathBuf, dest_dir_path: &PathBuf) -> tokio::io::Result<u64> {
+    _copy_file(file_name, src_dir_path, dest_dir_path).await?;
+    _remove_file(file_name, src_dir_path).await?;
     Ok(1)
 }
 
@@ -157,9 +167,7 @@ pub async fn create_and_write_label_file(file_name: &str, input_data: &[u8], des
 async fn __copy_files(files: Iter<'_, String>, src_dir_path: &PathBuf, dest_dir_path: &PathBuf) -> tokio::io::Result<u64> {
     let mut total_write = 0;
     for file in files {
-        let src_path = src_dir_path.join(file.as_str());
-        let dest_path = dest_dir_path.join(file.as_str());
-        let write_bytes = tokio::fs::copy(src_path, dest_path).await.unwrap();
+        let write_bytes = _copy_file(file.as_str(), src_dir_path, dest_dir_path).await?;
         total_write += write_bytes;
     }
     Ok(total_write)
@@ -173,7 +181,7 @@ async fn __remove_files(files: Iter<'_, String>, src_dir_path: &PathBuf) -> toki
 
         tracing::warn!("Removing the file locate at {:#?}", file_path);
 
-        tokio::fs::remove_file(file_path).await?;
+        _remove_file(file.as_str(), src_dir_path).await?;
         count += 1;
     }
     if count == expected_count {
