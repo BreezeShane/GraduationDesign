@@ -36,7 +36,7 @@ const LabelData: React.FC<{ messageClient: NotificationInstance }> = (props) => 
     const [imageLabel, setImageLabel] = useState("");
     const [image_list, setImageList] = useState<string[]>([]);
     const [total, setTotal] = useState(0);
-    const [current_page, setCurrentPage] = useState(0);
+    const [current_page, setCurrentPage] = useState(1);
     const [current_image_link, setCurrentImageLink] = useState("");
 
     useEffect(() => {
@@ -86,6 +86,7 @@ const LabelData: React.FC<{ messageClient: NotificationInstance }> = (props) => 
     };
 
     const onChange: PaginationProps['onChange'] = (page) => {
+        setImageLabel("");
         setCurrentImageLink("");
         setCurrentPage(page);
         updateImagebyIndex(page);
