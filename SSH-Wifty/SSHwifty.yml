@@ -1,0 +1,14 @@
+services:
+    sshwifty:
+        restart: unless-stopped
+        image: niruix/sshwifty:latest
+        container_name: sshwifty
+        hostname: sshwifty
+        environment:
+        - TZ=Asia/Shanghai
+        - SSHWIFTY_CONFIG=/etc/sshwifty/sshwifty.conf.json
+        volumes:
+        - ./sshwifty:/etc/sshwifty/
+        - ./cert:/etc/cert
+        ports:
+        - 8182:8182

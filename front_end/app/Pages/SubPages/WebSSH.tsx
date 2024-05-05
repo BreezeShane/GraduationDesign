@@ -11,18 +11,13 @@ const iframeStyle: React.CSSProperties = {
 const WebSSH: React.FC<{ messageClient: NotificationInstance }> = (props) => {
     const { messageClient } = props;
     const [dest_ssh, setDestSSH] = useState("");
-    let email = sessionStorage.getItem('useremail');
+    const [useremail, setUserEmail] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!email) {
-            messageClient.error({
-                message: `Forbidden Operation!`,
-                description: "You should sign in first!",
-                placement: 'topLeft',
-                duration: 2,
-            });
-        }
-        axios.post(`/admin/authenticate_ssh/${email}`, {})
+        setUserEmail(sessionStorage.getItem('useremail'));
+    })
+    if (useremail) {
+        axios.post(`/admin/authenticate_ssh/${useremail}`, {})
         .then((res) => {
             if (res.status == 200){
                 messageClient.success({
@@ -42,8 +37,9 @@ const WebSSH: React.FC<{ messageClient: NotificationInstance }> = (props) => {
                 placement: 'topLeft',
                 duration: 2,
             });
-        })
-    })
+        });
+    }
+
     return (
         <iframe src={dest_ssh} style={iframeStyle}/>
     );

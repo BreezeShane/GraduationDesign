@@ -100,10 +100,17 @@
 │   │   ├── client.rs
 │   │   └── server.rs
 │   └── user_manager.rs
-├── SSH-KeyGen.sh
-└── SSHwifty.yml
+└── SSH-Wifty
+    ├── cert
+    │   ├── cert.key
+    │   └── cert.pem
+    ├── SSH-KeyGen.sh
+    ├── sshwifty
+    │   ├── sshwifty.conf.json
+    │   └── sshwifty.conf.json.example
+    └── SSHwifty.yml
 
-20 directories, 79 files</code>
+23 directories, 83 files</code>
 </pre>
 </details>
 
@@ -131,17 +138,22 @@ cargo run --bin init # Initialize database.
 
 The deeplearning server should deploy up SSH wifty server based on Go-lang.
 
-For the project, you could run the command to install & start docker service:
+In order to use SSH Wifty, it's needed to generate SSL Certificates for securing the connection to deeplearning server first, so you could simply run the shell `SSH-KeyGen.sh`:
 ```shell
-docker-compose -f SSHwifty.yml up -d
+sh ./SSH-KeyGen.sh
 ```
-And you could run the command to stop docker service:
+
+And then for the project, you could run the command to install & start docker service:
 ```shell
-docker-compose -f SSHwifty.yml stop
+docker-compose -f ./SSH-Wifty/SSHwifty.yml up -d
+```
+However, you could run the command to stop docker service:
+```shell
+docker-compose -f ./SSH-Wifty/SSHwifty.yml stop
 ```
 If you would like to stop and remove the docker service, run this:
 ```shell
-docker-compose -f SSHwifty.yml down
+docker-compose -f ./SSH-Wifty/SSHwifty.yml down
 ```
 
 The expected run result should be like here:
@@ -158,12 +170,7 @@ The expected run result should be like here:
  ✔ Container sshwifty    Started                                                                                                         0.6s
 ```
 
-If it's need to use RSA to secure the connection to deeplearning server, you could simply run the shell `SSH-KeyGen.sh`:
-```shell
-sh ./SSH-KeyGen.sh
-```
-
-<center><strong>⚠️ To use SSH Wifty, you should ensure that the "sshd" daemon is running. Use <code>systemctl start sshd</code> to start sshd service.</strong></center>
+<center><strong>⚠️ To use SSH Wifty, you should ensure that the "sshd" daemon is running on the server. <br />ℹ️ Use <code>systemctl start sshd</code> to start sshd service.</strong></center>
 
 ### CUDA == v11.7 (Not ensured to support newer version) **[On dev]**
 
@@ -379,6 +386,10 @@ Because COCA need two input(Images and Text), so it's necessary to generate a ne
 The deep learning model named COCA, which comes from [TorchMultimodal](https://github.com/facebookresearch/multimodal), is the large model in this project here using for insect image classification. Thanks for their excellent works!
 
 However I extract COCA only and edited source code in order to fit the project in plan of applying `deepspeed`, `Lora Adaptation`, `TVM`, etc.
+
+### Project aiding in comprehension of COCA [[Reference]](https://github.com/lucidrains/CoCa-pytorch)
+
+The project is not used here. But I use it for learn about COCA. So I would like to greatly appreciate their precious work!
 
 ### Early Stop Source [[Reference]](https://github.com/Bjarten/early-stopping-pytorch)
 

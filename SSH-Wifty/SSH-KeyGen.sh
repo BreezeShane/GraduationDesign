@@ -3,7 +3,7 @@ if [ ! $# -lt 1  ];then
   exit
 fi
 
-dirname=${1:-".key"}
+dirname=${1:-"cert"}
 if [ ! -d $dirname  ];then
   mkdir $dirname
 fi
