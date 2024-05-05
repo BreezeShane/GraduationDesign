@@ -28,8 +28,7 @@ fn main() -> Result<(), Error> {
             time_out        BIGINT NOT NULL,
             pic_link        TEXT NOT NULL,
             real_label      VARCHAR NOT NULL,
-            submit_count    BIGINT NOT NULL,
-            acceptable      BOOLEAN NOT NULL
+            submit_count    BIGINT NOT NULL
         );
     ")?;
     print!("Created TFeedback Table!\n");
@@ -40,8 +39,7 @@ fn main() -> Result<(), Error> {
             id              SERIAL PRIMARY KEY,
             time_stamp      BIGINT NOT NULL,
             from_user_email VARCHAR NOT NULL,
-            pic_link        TEXT NOT NULL,
-            acceptable      BOOLEAN NOT NULL
+            pic_link        TEXT NOT NULL
         );
     ")?;
     print!("Created UFeedback Table!\n");
