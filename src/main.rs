@@ -16,7 +16,7 @@ use chrono::Local;
 use daemon::{Cronie, Daemon};
 use io_agent::handler_upload_pic;
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
-use feedback::{handler_acc_rej_fb, handler_fetch_all_fb, handler_fetch_ufb, handler_label_pic, handler_subm_fb};
+use feedback::{handler_acc_rej_fb, handler_fetch_trainable_fb, handler_fetch_ufb, handler_label_pic, handler_subm_fb};
 use model_manager::handler_fetch_all_models;
 use postgres::Client;
 use std::fs::read_dir;
@@ -138,7 +138,7 @@ async fn main() {
         .route("/user/label_pic", get(handler_fetch_ufb).post(handler_label_pic))
         .route("/fetch_image", get(handler_fetch_image))
 
-        .route("/admin/feedback_manage", get(handler_fetch_all_fb).post(handler_acc_rej_fb))
+        .route("/admin/feedback_manage", get(handler_fetch_trainable_fb).post(handler_acc_rej_fb))
         .route("/admin/user_manage", get(handler_fetch_all_users).post(handler_suspend_or_unsuspend_user))
         .route("/admin/model_manage", get(handler_fetch_all_models).post(handler_file_operation))
         // .route("/admin/:user_id/dataset_manage/:file_name", post(handler_upload_dset))
