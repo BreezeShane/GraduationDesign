@@ -5,21 +5,23 @@ import os
 import imghdr
 from os.path import join
 from PIL import Image
+from torch import Tensor
 from torchvision import transforms
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, TensorDataset, DataLoader
 from dl_svc.config import IMG_TYPE_LIST
+from dl_svc.DataProcess.text_processor import text_process
 
 
 class IP102Dataset(Dataset):
     """ The Dataset class used for IP102. """
-    def __init__(self, dataset_path, data_label_file):
+    def __init__(self, dataset_path, data_label_file, image_size: int=224):
         self.transforms = transforms.Compose([
-            transforms.Resize((224, 224)),        # Crop to (512,512) size.
-            transforms.RandomRotation((30,150)), # Rotate 30°-150° randomly.
-            transforms.RandomHorizontalFlip(0.6),# Flip horizontally with 0.6 probability.
-            transforms.RandomVerticalFlip(0.4),  # Flip vertically with 0.4 probability.
-            transforms.ToTensor(),               # Convert into tensor, and normalize into [0-1],
-                                                 # then convert [W,H,C] to [C,W,H] (PyTorch needs).
+            transforms.Resize((image_size, image_size)),    # Crop to (512,512) size.
+            transforms.RandomRotation((30,150)),            # Rotate 30°-150° randomly.
+            transforms.RandomHorizontalFlip(0.6),           # Flip horizontally with 0.6 probability.
+            transforms.RandomVerticalFlip(0.4),             # Flip vertically with 0.4 probability.
+            transforms.ToTensor(),                          # Convert into tensor, and normalize into [0-1],
+                                                            # then convert [W,H,C] to [C,W,H] (PyTorch needs).
             transforms.Normalize(
                 mean=(0.5, 0.5, 0.5),
                 std=(0.5, 0.5, 0.5))             # Convert [0-1] into [-1, 1].
@@ -37,32 +39,43 @@ class IP102Dataset(Dataset):
             for raw_line in raw_image_label_lines:
                 temp = raw_line.split(' ')
                 label_data_list.append(
-                    (int(temp[1]), join(images_path, temp[0]))
+                    # (int(temp[1]), join(images_path, temp[0]))
+                    join(images_path, temp[0])
                 )
             self.label_data = label_data_list
         except IOError as exc:
             raise IOError(
-                "Cannot load dataset! Please check the correct path "
-                "and keep the file struct of dataset right."
+                    "Cannot load dataset! Please check the correct path "
+                    "and keep the file struct of dataset right."
                 ) from exc
 
     def __getitem__(self, index):
-        data_with_label = self.label_data[index]
-        label = data_with_label[0]
+        # data_with_label = self.label_data[index]
+        # label = data_with_label[0]
+        image_data = self.label_data[index]
         data = self.transforms(
-            Image.open(data_with_label[1])
+            # Image.open(data_with_label[1])
+            Image.open(image_data)
         )
-        return label, data
+        # return label, data
+        return data
 
     def __len__(self):
         return len(self.label_data)
 
 
-def load_dataset(dataset_folder_path, record_file, shuffle=True, batch_size=None) -> DataLoader:
+def load_image_dataset(dataset_folder_path, record_file, shuffle=True, batch_size=None) -> DataLoader:
     """ load IP102 dataset by text file. """
-    ip102_dataset = IP102Dataset(dataset_folder_path, record_file)
-    dataloader = DataLoader(dataset=ip102_dataset, batch_size=batch_size, shuffle=shuffle)
-    return dataloader
+    ip102_dataset = IP102Dataset(dataset_folder_path, record_file, image_size=512)
+    image_dataloader = DataLoader(dataset=ip102_dataset, batch_size=batch_size, shuffle=shuffle)
+    return image_dataloader
+
+def load_text_dataset(dataset_folder_path, record_file, shuffle=True, batch_size=None):
+    vocabulary, converter = text_process(dataset_folder_path, record_file, vec_dim=4)
+    tensor_word_vecs = Tensor(converter.get_word_vecs())
+    text_dataset = TensorDataset(tensor_word_vecs)
+    text_dataloader = DataLoader(dataset=text_dataset, batch_size=batch_size, shuffle=shuffle)
+    return text_dataloader
 
 
 def load_data(data_folder_path):
@@ -80,4 +93,3 @@ def load_data(data_folder_path):
                 (file_path, Image.open(file_path))
             )
     return data_list
-            

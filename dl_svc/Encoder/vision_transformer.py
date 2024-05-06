@@ -19,19 +19,19 @@ from dl_svc.Utils.common import load_module_from_url
 
 class VisionTransformer(nn.Module):
     """
-    General image transformer encoder with embeddings. Similar to 
-    ``VisionTransformer`` in torchvision, but more composable. Can be 
+    General image transformer encoder with embeddings. Similar to
+    ``VisionTransformer`` in torchvision, but more composable. Can be
     constructed with any user-provided embeddings, encoder, and task head.
 
     Attributes:
         embeddings (nn.Module): Module that projects image pixels into embeddings.
             See :py:class: PatchEmbeddings for interface.
-        encoder (nn.Module): Module for transformer encoder. 
+        encoder (nn.Module): Module for transformer encoder.
             See :py:class: TransformerEncoder for interface.
-        pooler (nn.Module, optional): Module for pooler to be applied after layernorm. 
+        pooler (nn.Module, optional): Module for pooler to be applied after layernorm.
             Defaults to ``None``.
-        weight_init_fn (Callable, optional): function for custom weight initialization of 
-            both the transformer encoder and embeddings. 
+        weight_init_fn (Callable, optional): function for custom weight initialization of
+            both the transformer encoder and embeddings.
             See :py:func: init_transformer_weights as an example. Defaults to ``None``.
 
     Args:
@@ -66,7 +66,7 @@ class VisionTransformer(nn.Module):
         attention_mask: Optional[Tensor] = None,
     ) -> TransformerOutput:
         """
-            Definition of VisionTransformer forward. 
+            Definition of VisionTransformer forward.
         """
         embedding_output = self.embeddings(
             images, image_patches_mask=image_patches_mask
@@ -103,7 +103,7 @@ class GlobalAveragePooler(nn.Module):
         input_dim (int): hidden dim of the transformer last hidden state.
         output_dim (Optional[int]): output dim of the linear head. if None, no linear
             head is added. Defaults to None. ln_eps (float): layer norm epsilon. Defaults to 1e-6.
-        init_weights (Optional[Callable]): function to initialize weights of the module. 
+        init_weights (Optional[Callable]): function to initialize weights of the module.
             Defaults to None.
 
     """
@@ -127,7 +127,7 @@ class GlobalAveragePooler(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         """
         Args:
-            x (Tensor): Input tensor with shape bsz x len x input_dim. The first entry in 
+            x (Tensor): Input tensor with shape bsz x len x input_dim. The first entry in
                 assumed to be CLS and ignored during averaging
         Returns:
             Tensor: Output tensor with shape bsz x output_dim
@@ -162,17 +162,17 @@ def vision_transformer(
     """
     Args:
         patch_size (int): Size of each patch that the image is divided into.
-        hidden_dim (int): Hidden dimension of the output of patch embedding 
+        hidden_dim (int): Hidden dimension of the output of patch embedding
             and input to the transformer
         dim_feedforward (int): Dimension of the feedforward network inside the transformer.
         n_layer (int): Number of hidden layers in the transformer.
         n_head (int): Number of attention heads in the transformer.
-        image_size (Union[int, Tuple[int, int]]): Size of the input image. 
+        image_size (Union[int, Tuple[int, int]]): Size of the input image.
             If tuple, should be height, width. If int, square input is assumed. Defaults to 224
         num_channels (int): Number of channels in the input. Defaults to 3.
         activation (Callable): Activation function for the transformer. Defaults to nn.GELU.
         transformer_dropout (float): Dropout probability for the transformer. Defaults to 0.0.
-        patch_embed_dropout_prob (float): Dropout probability for the patch embedding. 
+        patch_embed_dropout_prob (float): Dropout probability for the patch embedding.
             Defaults to 0.0.
         layer_norm_eps (float): layer norm epsilon for the transformer blocks. Defaults to 1e-6.
         final_layer_norm_eps (Optional[float]) = layer norm epsilon for final ln layer of
@@ -184,7 +184,7 @@ def vision_transformer(
         drop_path_rate (Optional[float]): use stochastic drop path instead of dropout
             for attn and feedforward dropout in transformer block. Defaults to None.
         patch_drop_rate (Optional[Union[float, Tuple[float, float]]]): ratio of patches to mask
-            out before passing through encoder as in https://arxiv.org/abs/2212.00794. 
+            out before passing through encoder as in https://arxiv.org/abs/2212.00794.
             Set to tuple if dimension wise masking is needed (for 2d masking). Defaults to None.
         pooler (nn.Module, optional): Pooling function to be applied to the last hidden
             state from the transformer like avg pooling. Defaults to None.

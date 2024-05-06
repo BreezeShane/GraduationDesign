@@ -83,11 +83,11 @@ class Converter:
         self.max_vec_dim = 0
 
     def __call__(self, path: str, vec_dim: int):
-        """ In the end EOS will be appended in to word vec. """
+        """ Each word vec would be like [ [SOS], ...., [CLS], [EOS] ]. """
         raw_lines = None
         with open(path, encoding="utf-8") as f:
             raw_lines = f.read().splitlines()
-        for line in raw_lines:
+        for idx, line in enumerate(raw_lines): # Where idx means [CLS].
             vector = []
             words = line.split(' ')
             if len(words) > self.max_vec_dim:
@@ -95,14 +95,13 @@ class Converter:
             for word in words:
                 vector.append(self.vocabulary.to_index(word))
             vector = self._fill_vec(vector, vec_dim)
-            self.word_vecs.append(vector)
-        self._fill_eos()
 
-    def _fill_eos(self):
-        eos_value = self.vocabulary.to_index("EOS")
-        for word_vec in self.word_vecs:
-            word_vec.append(eos_value)
-        self.max_vec_dim += 1
+            vector.insert(0, self.vocabulary.to_index("SOS"))
+            vector.append(idx)
+            # vector.append(self.vocabulary.to_index("EOS"))
+
+            self.word_vecs.append(vector)
+        self.max_vec_dim += 2
 
     def _fill_vec(self, vec2cvrt, exp_vec_dim: int):
         curr_vec_dim = len(vec2cvrt)
@@ -125,11 +124,22 @@ class Converter:
         return self.word_vecs
 
 
-def text_process(arguments, record_file):
+def text_process(dataset_folder_path, record_file, vec_dim=4):
     """ Process text file to Vocabulary Dict and WordVec Dict. """
-    species_file_path = join(arguments.text, record_file)
+    species_file_path = join(dataset_folder_path, record_file)
+    vocab = Vocabulary("SpeciesDict")
+    cvrt = Converter("SpeciesVectorsDict", vocab)
+    vocab(species_file_path)
+    cvrt(species_file_path, vec_dim=vec_dim)
+    return vocab, cvrt
+
+if __name__ == "__main__":
+    species_file_path = "./datasets/IP102_v1.1/class.txt"
     vocab = Vocabulary("SpeciesDict")
     cvrt = Converter("SpeciesVectorsDict", vocab)
     vocab(species_file_path)
     cvrt(species_file_path, vec_dim=4)
-    return vocab, cvrt
+    _dict = cvrt.get_word_vecs()
+    for item in _dict:
+        print(item)
+    print(cvrt.max_vec_dim)

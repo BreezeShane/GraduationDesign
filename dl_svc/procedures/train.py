@@ -8,12 +8,12 @@ import torch
 import numpy as np
 import deepspeed
 from tqdm import tqdm
-from torchsummary import summary
+from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
 from peft import get_peft_model, LoraConfig, TaskType
 
-from dl_svc.DataProcess.datasetloader import load_dataset
+from dl_svc.DataProcess.datasetloader import load_image_dataset, load_text_dataset
 from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14
 from dl_svc.COCA.coca_vit_custom import coca_vit_custom
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
@@ -32,8 +32,9 @@ def train(args, carry_on=False):
     """ Train COCA Vit Model. """
     setup_seed(TRAIN_CFG.SEED)
 
-    t_dataloader = load_dataset(args.tset, "train.txt", batch_size=TRAIN_CFG.BATCH_SIZE)
-    v_dataloader = load_dataset(args.vset, "val.txt", shuffle=False)
+    t_img_dataloader = load_image_dataset(args.tset, "train.txt", batch_size=TRAIN_CFG.BATCH_SIZE)
+    t_txt_dataloader = load_text_dataset(args.text, "class.txt", batch_size=TRAIN_CFG.BATCH_SIZE)
+    v_dataloader = load_image_dataset(args.vset, "val.txt", shuffle=False)
 
     match args.model_type:
         case 'large':
@@ -60,23 +61,23 @@ def train(args, carry_on=False):
 
     if args.use_deepspeed:
         parameters = filter(lambda p: p.requires_grad, model.parameters())
-        model, optimizer, t_dataloader, lr_scheduler = deepspeed.initialize(
-            model=model, model_parameters=parameters, training_data=t_dataloader)
-        lr_scheduler.total_num_steps = len(t_dataloader)
+        model, optimizer, t_img_dataloader, lr_scheduler = deepspeed.initialize(
+            model=model, model_parameters=parameters, training_data=t_img_dataloader)
+        lr_scheduler.total_num_steps = len(t_img_dataloader)
     else:
         optimizer = torch.optim.Adam(
             model.parameters(),lr=TRAIN_CFG.LR)
         if TRAIN_CFG.WARM_UP:
             lr_scheduler = CosineAnnealingWarmRestarts(
                 optimizer=optimizer,
-                T_0=len(t_dataloader),
+                T_0=len(t_img_dataloader),
                 T_mult=1,
                 # eta_min=1e-6
             )
         else:
             lr_scheduler = CosineAnnealingLR(
                 optimizer,
-                T_max=len(t_dataloader),
+                T_max=len(t_img_dataloader),
                 # eta_min=1e-6
             )
 
@@ -108,9 +109,12 @@ def train(args, carry_on=False):
         )
     writer = SummaryWriter(TENSORBOARD_DATA_PATH)
     #TB Print Model
-    rand_input = (torch.randn(1, 3, 224, 224), torch.randn(1, 1))
-    print(summary(model, rand_input, device="cpu"))
-    writer.add_graph(model, input_to_model=rand_input)
+    print(summary(model, [ (1, 3, 512, 512), (1, 6) ],
+        dtypes=[torch.float, torch.long], device="cpu"))
+    writer.add_graph(model, input_to_model=[
+        torch.rand(1, 3, 512, 512),         # image
+        torch.randint(0, 194, size=(1, 6))  # text
+    ])
 
     train_epochs_loss = []
     valid_epochs_loss = []
@@ -122,13 +126,13 @@ def train(args, carry_on=False):
         train_epoch_loss = []
         acc, nums = 0., 0
 
-        for idx, (labels, inputs) in enumerate(tqdm(t_dataloader)):
+        for idx, (texts, inputs) in enumerate(tqdm(t_img_dataloader, t_txt_dataloader)):
             inputs = inputs.to(torch.float32).to(model.local_rank
                                                     if args.use_deepspeed else args.device)
-            labels = labels.to(torch.float32).to(model.local_rank
+            texts = texts.to(torch.float32).to(model.local_rank
                                                     if args.use_deepspeed else args.device)
-            outputs = model(inputs)
-            loss = loss_criterion(outputs, labels)
+            outputs = model(inputs, texts)
+            loss = loss_criterion(outputs, texts)
 
             if args.use_deepspeed:
                 model.backward(loss)
@@ -143,10 +147,10 @@ def train(args, carry_on=False):
             lr_scheduler.step()
 
             train_epoch_loss.append(loss.item())
-            acc += sum(outputs.max(axis=1)[1] == labels).cpu()
-            nums += labels.size()[0]
+            acc += sum(outputs.max(axis=1)[1] == texts).cpu()
+            nums += texts.size()[0]
 
-            len_t_dataloader = len(t_dataloader)
+            len_t_dataloader = len(t_img_dataloader)
             if idx % (len_t_dataloader // 1000) == 0:
                 print(f"epoch={epoch+1}/{TRAIN_CFG.EPOCHS}, "
                       f"{idx}/{len_t_dataloader} of train, loss={loss.item()}")
@@ -158,7 +162,7 @@ def train(args, carry_on=False):
                     },
                     join(
                         args.mod_path,
-                        f'{idx}-{len(t_dataloader)}-model.pt'
+                        f'{idx}-{len(t_img_dataloader)}-model.pt'
                     )
                 )
                 if not TRAIN_CFG.EARLY_STOP:
@@ -191,15 +195,15 @@ def train(args, carry_on=False):
                 model.eval()
                 valid_epoch_loss = []
                 acc, nums = 0., 0
-                for idx, (labels, inputs) in enumerate(tqdm(v_dataloader)):
+                for idx, (texts, inputs) in enumerate(tqdm(v_dataloader)):
                     inputs = inputs.to(torch.float32).to(args.device)
-                    labels = labels.to(torch.float32).to(args.device)
+                    texts = texts.to(torch.float32).to(args.device)
                     outputs = model(inputs)
-                    loss = loss_criterion(outputs, labels)
+                    loss = loss_criterion(outputs, texts)
 
                     valid_epoch_loss.append(loss.item())
-                    acc += sum(outputs.max(axis=1)[1] == labels).cpu()
-                    nums += labels.size()[0]
+                    acc += sum(outputs.max(axis=1)[1] == texts).cpu()
+                    nums += texts.size()[0]
                     #TB Print valid loss
                     writer.add_scalar(f"V_loss_epoch_{epoch+1}", loss.item(), idx)
 

@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 import torch
 
-from dl_svc.DataProcess.datasetloader import load_dataset, load_data
+from dl_svc.DataProcess.datasetloader import load_image_dataset, load_data
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
 from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14
 from dl_svc.COCA.coca_vit_custom import coca_vit_custom
@@ -16,7 +16,7 @@ def validate(args):
     """ Definition of validation procedure. """
     if args.vset is None:
         raise ValueError("Validate Dataset is needed!")
-    v_dataloader = load_dataset(args.vset, "valid.txt")
+    v_dataloader = load_image_dataset(args.vset, "valid.txt")
 
     model = __load_model(args=args)
     loss_criterion = ContrastiveLossWithTemperature(
