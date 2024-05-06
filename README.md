@@ -170,7 +170,7 @@ The expected run result should be like here:
  ✔ Container sshwifty    Started                                                                                                         0.6s
 ```
 
-<center><strong>⚠️ To use SSH Wifty, you should ensure that the "sshd" daemon is running on the server. <br />ℹ️ Use <code>systemctl start sshd</code> to start sshd service.</strong></center>
+<center><strong>⚠️ To use SSH Wifty, you should ensure that the "sshd" daemon is running on the server. <br />📄 Use <code>systemctl start sshd</code> to start sshd service.</strong></center>
 
 ### CUDA == v11.7 (Not ensured to support newer version) **[On dev]**
 
@@ -185,6 +185,10 @@ The command comes from `pytorch.org`, for more details, see: [INSTALLING PREVIOU
 
 
 ## Deep Learning
+
+To use the project, run `pip install -r requirements.txt` first.
+
+⚠️**Caution**: if you reach such warning `WARNING: There was an error checking the latest version of pip.` or such error `RecursionError: maximum recursion depth exceeded while calling a Python object` while run `pip install`, please run `python UpgradePip.py first.`
 
 ### Using Datasets
 
