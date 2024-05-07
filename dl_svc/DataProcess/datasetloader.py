@@ -5,16 +5,16 @@ import os
 import imghdr
 from os.path import join
 from PIL import Image
-from torch import Tensor
+import torch
 from torchvision import transforms
-from torch.utils.data import DataLoader, Dataset, TensorDataset, DataLoader
+from torch.utils.data import DataLoader, Dataset
 from dl_svc.config import IMG_TYPE_LIST
-from dl_svc.DataProcess.text_processor import text_process
+from dl_svc.DataProcess.text_processor import text_process, Converter
 
 
 class IP102Dataset(Dataset):
     """ The Dataset class used for IP102. """
-    def __init__(self, dataset_path, data_label_file, image_size: int=224):
+    def __init__(self, dataset_path, data_label_file, converter: Converter, image_size: int=224):
         self.transforms = transforms.Compose([
             transforms.Resize((image_size, image_size)),    # Crop to (512,512) size.
             transforms.RandomRotation((30,150)),            # Rotate 30°-150° randomly.
@@ -26,6 +26,7 @@ class IP102Dataset(Dataset):
                 mean=(0.5, 0.5, 0.5),
                 std=(0.5, 0.5, 0.5))             # Convert [0-1] into [-1, 1].
         ])
+        self.converter = converter
 
         if not os.path.isdir(dataset_path):
             raise ValueError(f"Expected the path to dataset, but got {dataset_path}")
@@ -39,8 +40,7 @@ class IP102Dataset(Dataset):
             for raw_line in raw_image_label_lines:
                 temp = raw_line.split(' ')
                 label_data_list.append(
-                    # (int(temp[1]), join(images_path, temp[0]))
-                    join(images_path, temp[0])
+                    (int(temp[1]), join(images_path, temp[0]))
                 )
             self.label_data = label_data_list
         except IOError as exc:
@@ -50,32 +50,27 @@ class IP102Dataset(Dataset):
                 ) from exc
 
     def __getitem__(self, index):
-        # data_with_label = self.label_data[index]
-        # label = data_with_label[0]
-        image_data = self.label_data[index]
-        data = self.transforms(
-            # Image.open(data_with_label[1])
-            Image.open(image_data)
+        data_with_label = self.label_data[index]
+        label = data_with_label[0]
+        label_tensor = torch.tensor(
+                self.converter.get_word_vec(label),
+                dtype=torch.long
+            )
+        image_tensor = self.transforms(
+            Image.open(data_with_label[1])
         )
-        # return label, data
-        return data
+        return label_tensor, image_tensor
 
     def __len__(self):
         return len(self.label_data)
 
 
-def load_image_dataset(dataset_folder_path, record_file, shuffle=True, batch_size=None) -> DataLoader:
+def load_dataset(dataset_folder_path, record_file, class_file, shuffle=True, batch_size=None) -> DataLoader:
     """ load IP102 dataset by text file. """
-    ip102_dataset = IP102Dataset(dataset_folder_path, record_file, image_size=512)
-    image_dataloader = DataLoader(dataset=ip102_dataset, batch_size=batch_size, shuffle=shuffle)
-    return image_dataloader
-
-def load_text_dataset(dataset_folder_path, record_file, shuffle=True, batch_size=None):
-    vocabulary, converter = text_process(dataset_folder_path, record_file, vec_dim=4)
-    tensor_word_vecs = Tensor(converter.get_word_vecs())
-    text_dataset = TensorDataset(tensor_word_vecs)
-    text_dataloader = DataLoader(dataset=text_dataset, batch_size=batch_size, shuffle=shuffle)
-    return text_dataloader
+    vocabulary, converter = text_process(dataset_folder_path, class_file, vec_dim=4)
+    ip102_dataset = IP102Dataset(dataset_folder_path, record_file, converter, image_size=512)
+    _dataloader = DataLoader(dataset=ip102_dataset, batch_size=batch_size, shuffle=shuffle)
+    return _dataloader
 
 
 def load_data(data_folder_path):

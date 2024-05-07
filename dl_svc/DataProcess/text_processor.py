@@ -83,7 +83,7 @@ class Converter:
         self.max_vec_dim = 0
 
     def __call__(self, path: str, vec_dim: int):
-        """ Each word vec would be like [ [SOS], ...., [CLS], [EOS] ]. """
+        """ Each word vec would be like [ [SOS], ...., [CLS] ]. """
         raw_lines = None
         with open(path, encoding="utf-8") as f:
             raw_lines = f.read().splitlines()
@@ -122,6 +122,10 @@ class Converter:
     def get_word_vecs(self):
         """ Get word vectors in list. """
         return self.word_vecs
+
+    def get_word_vec(self, label):
+        assert label == self.word_vecs[label][-1]
+        return self.word_vecs[label]
 
 
 def text_process(dataset_folder_path, record_file, vec_dim=4):

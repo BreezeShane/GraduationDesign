@@ -13,7 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
 from peft import get_peft_model, LoraConfig, TaskType
 
-from dl_svc.DataProcess.datasetloader import load_image_dataset, load_text_dataset
+from dl_svc.DataProcess.datasetloader import load_dataset
 from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14
 from dl_svc.COCA.coca_vit_custom import coca_vit_custom
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
@@ -28,13 +28,18 @@ def setup_seed(seed):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
 
+def embedding_cosine_similarity(matrix_1, matrix_2):
+    x = matrix_1.mul(matrix_2)
+    x = (x - x.min()) / (x.max() - x.min())
+    x = (x - 0.5) * 2
+    return x
+
 def train(args, carry_on=False):
     """ Train COCA Vit Model. """
     setup_seed(TRAIN_CFG.SEED)
 
-    t_img_dataloader = load_image_dataset(args.tset, "train.txt", batch_size=TRAIN_CFG.BATCH_SIZE)
-    t_txt_dataloader = load_text_dataset(args.text, "class.txt", batch_size=TRAIN_CFG.BATCH_SIZE)
-    v_dataloader = load_image_dataset(args.vset, "val.txt", shuffle=False)
+    t_dataloader = load_dataset(args.tset, "train.txt", "class.txt", batch_size=TRAIN_CFG.BATCH_SIZE)
+    v_dataloader = load_dataset(args.vset, "val.txt", "class.txt", shuffle=False)
 
     match args.model_type:
         case 'large':
@@ -61,23 +66,23 @@ def train(args, carry_on=False):
 
     if args.use_deepspeed:
         parameters = filter(lambda p: p.requires_grad, model.parameters())
-        model, optimizer, t_img_dataloader, lr_scheduler = deepspeed.initialize(
-            model=model, model_parameters=parameters, training_data=t_img_dataloader)
-        lr_scheduler.total_num_steps = len(t_img_dataloader)
+        model, optimizer, t_dataloader, lr_scheduler = deepspeed.initialize(
+            model=model, model_parameters=parameters, training_data=t_dataloader)
+        lr_scheduler.total_num_steps = len(t_dataloader)
     else:
         optimizer = torch.optim.Adam(
             model.parameters(),lr=TRAIN_CFG.LR)
         if TRAIN_CFG.WARM_UP:
             lr_scheduler = CosineAnnealingWarmRestarts(
                 optimizer=optimizer,
-                T_0=len(t_img_dataloader),
+                T_0=len(t_dataloader),
                 T_mult=1,
                 # eta_min=1e-6
             )
         else:
             lr_scheduler = CosineAnnealingLR(
                 optimizer,
-                T_max=len(t_img_dataloader),
+                T_max=len(t_dataloader),
                 # eta_min=1e-6
             )
 
@@ -110,11 +115,13 @@ def train(args, carry_on=False):
     writer = SummaryWriter(TENSORBOARD_DATA_PATH)
     #TB Print Model
     print(summary(model, [ (1, 3, 512, 512), (1, 6) ],
-        dtypes=[torch.float, torch.long], device="cpu"))
+        dtypes=[torch.float, torch.long], device=args.device))
     writer.add_graph(model, input_to_model=[
         torch.rand(1, 3, 512, 512),         # image
         torch.randint(0, 194, size=(1, 6))  # text
     ])
+
+    model.to(args.device)
 
     train_epochs_loss = []
     valid_epochs_loss = []
@@ -126,31 +133,33 @@ def train(args, carry_on=False):
         train_epoch_loss = []
         acc, nums = 0., 0
 
-        for idx, (texts, inputs) in enumerate(tqdm(t_img_dataloader, t_txt_dataloader)):
-            inputs = inputs.to(torch.float32).to(model.local_rank
-                                                    if args.use_deepspeed else args.device)
-            texts = texts.to(torch.float32).to(model.local_rank
-                                                    if args.use_deepspeed else args.device)
-            outputs = model(inputs, texts)
-            loss = loss_criterion(outputs, texts)
+        for idx, (texts, inputs) in enumerate(tqdm(t_dataloader)):
+            inputs = inputs.to(model.local_rank if args.use_deepspeed else args.device)
+            texts = texts.to(model.local_rank if args.use_deepspeed else args.device)
 
             if args.use_deepspeed:
+                outputs = model(inputs, texts)
+                # The above might be loss = model(inputs, texts) and then the next line should be removed.
+                loss = loss_criterion(outputs[0].squeeze(), outputs[1])
                 model.backward(loss)
-                model.step()
-                lr_scheduler.step()
+                model.step()    # lr_scheduler.step() would also be executed by this.
             else:
                 optimizer.zero_grad()
-                model.backward()
+                outputs = model(inputs, texts)
+                loss = loss_criterion(outputs[0].squeeze(), outputs[1])
+                loss.backward()
                 # torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0) # grad clip
                 optimizer.step()
-            # Cosine Annealing Learning Rate While not using DeepSpeed
-            lr_scheduler.step()
+                # Cosine Annealing Learning Rate While not using DeepSpeed
+                lr_scheduler.step()
 
             train_epoch_loss.append(loss.item())
-            acc += sum(outputs.max(axis=1)[1] == texts).cpu()
-            nums += texts.size()[0]
+            predictions = embedding_cosine_similarity(outputs[0].squeeze(), outputs[1]).argmax(dim=1)
+            labels = texts[:, -1:].reshape(-1)
+            acc += sum(predictions == labels).cpu()
+            nums += labels.shape[0]
 
-            len_t_dataloader = len(t_img_dataloader)
+            len_t_dataloader = len(t_dataloader)
             if idx % (len_t_dataloader // 1000) == 0:
                 print(f"epoch={epoch+1}/{TRAIN_CFG.EPOCHS}, "
                       f"{idx}/{len_t_dataloader} of train, loss={loss.item()}")
@@ -162,7 +171,7 @@ def train(args, carry_on=False):
                     },
                     join(
                         args.mod_path,
-                        f'{idx}-{len(t_img_dataloader)}-model.pt'
+                        f'{idx}-{len(t_dataloader)}-model.pt'
                     )
                 )
                 if not TRAIN_CFG.EARLY_STOP:
@@ -179,11 +188,21 @@ def train(args, carry_on=False):
                     )
 
             #TB Print train loss and histogram of parameters' distribution
-            writer.add_scalar(f"T_loss_epoch_{epoch+1}", loss.item(), idx)
-            writer.add_scalar(f"learning_rate_epoch_{epoch + 1}", lr_scheduler.get_last_lr(), idx)
+            writer.add_scalar(
+                f"T_loss_epoch_{epoch+1}",
+                torch.tensor(loss.item(),
+                dtype=torch.float
+            ), idx)
+            writer.add_scalar(
+                f"learning_rate_epoch_{epoch + 1}",
+                torch.tensor(lr_scheduler.get_last_lr(),
+                dtype=torch.float
+            ), idx)
             for name, param in model.named_parameters():
-                writer.add_histogram(tag=name+'_grad', values=param.grad, global_step=idx)
+                if param.grad is not None:
+                  writer.add_histogram(tag=name+'_grad', values=param.grad, global_step=idx)
                 writer.add_histogram(tag=name+'_data', values=param.data, global_step=idx)
+
         t_loss_avg = np.average(train_epoch_loss)
         t_acc = 100 * acc / nums
         train_epochs_loss.append(t_loss_avg)

@@ -4,9 +4,10 @@
 import platform
 from yacs.config import CfgNode as CN
 
-DEFAULT_CONFIG_PATH = 'dl_svc/default/cfg.ini'
-CHECKPOINT_PATH = 'checkpoint/'
-TENSORBOARD_DATA_PATH = 'log'
+# CHECKPOINT_PATH = 'checkpoint/'
+# TENSORBOARD_DATA_PATH = 'log/'
+CHECKPOINT_PATH = './gdrive/MyDrive/GraduationDesign/checkpoint/'   # For Colab
+TENSORBOARD_DATA_PATH = './gdrive/MyDrive/GraduationDesign/log/'    # For Colab
 OS_NAME = platform.system().lower()
 IMG_TYPE_LIST = {'jpg','bmp','png','jpeg','rgb','tif'}
 

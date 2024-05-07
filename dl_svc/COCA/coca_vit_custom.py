@@ -17,18 +17,18 @@ def coca_vit_custom():
             # Required text args
             vocab_size=194,
             num_text_positions=6,
-            text_hidden_dim=512,
+            text_hidden_dim=102,
             text_n_layer=12,
-            text_n_head=8,
+            text_n_head=3,
             text_dim_feedforward=2048,
-            text_output_dim=512,
+            text_output_dim=102,
             # Required fusion args
             fusion_n_layer=12,
-            fusion_n_head=8,
+            fusion_n_head=3,
             fusion_dim_feedforward=2048,
             # Required attention pooler args
             pooler_input_embed_dim=768,
-            pooler_output_embed_dim=512,
+            pooler_output_embed_dim=102,
             pooler_n_head=8,
             # Optional vision args
             image_size=512,

@@ -9,7 +9,7 @@ from tvm.target import Target
 import torch
 
 from dl_svc.procedures.train import train
-from dl_svc.procedures.infer_et_valid import validate, inference
+from dl_svc.procedures.infer_et_test import test, inference
 from dl_svc.procedures.compile_model import compile_model
 from dl_svc.config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH, OS_NAME
 
@@ -41,9 +41,9 @@ def check_device(arguments):
         if gpu_id < '0' or gpu_id > '9':
             raise TypeError(f"Expected integer index representing GPU ID, but got '{gpu_id}'.\n"
                              "Tips: Expected device parameter example: '-d 0'.")
-        arguments.device = [torch.device(f"cuda:{gpu_id}") ]
+        arguments.device = torch.device(f"cuda:{gpu_id}")
     else:
-        arguments.device = [torch.device("cpu")]
+        arguments.device = torch.device("cpu")
 
 ## Not applied caused by the lack of GPUs.
 ## The function will be used on Multi-GPU Training implementation.
@@ -162,7 +162,7 @@ if __name__ == '__main__':
         case 'train':
             train(args, carry_on=args.carry_on)
         case 'valid':
-            validate(args)
+            test(args)
         case 'infer':
             result = inference(args)
         case 'compile_model':
