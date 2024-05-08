@@ -57,7 +57,7 @@ class IP102Dataset(Dataset):
                 dtype=torch.long
             )
         image_tensor = self.transforms(
-            Image.open(data_with_label[1])
+            Image.open(data_with_label[1]).convert('RGB')
         )
         return label_tensor, image_tensor
 
