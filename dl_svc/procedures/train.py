@@ -115,7 +115,7 @@ def train(args, carry_on=False):
     writer = SummaryWriter(TENSORBOARD_DATA_PATH)
     #TB Print Model
     print(summary(model, [ (1, 3, 512, 512), (1, 6) ],
-        dtypes=[torch.float, torch.long], device=args.device))
+        dtypes=[torch.float, torch.long], device="cpu"))
     writer.add_graph(model, input_to_model=[
         torch.rand(1, 3, 512, 512),         # image
         torch.randint(0, 194, size=(1, 6))  # text
@@ -160,9 +160,8 @@ def train(args, carry_on=False):
             nums += labels.shape[0]
 
             len_t_dataloader = len(t_dataloader)
-            if idx % (len_t_dataloader // 1000) == 0:
-                print(f"epoch={epoch+1}/{TRAIN_CFG.EPOCHS}, "
-                      f"{idx}/{len_t_dataloader} of train, loss={loss.item()}")
+            # Divided training data batches into 50 parts, each part would save the model, total 50 models.
+            if idx % (len_t_dataloader // 4) == 0 or idx == len_t_dataloader:
                 if args.use_lora:
                     model.save_pretrained(join(args.mod_path, peft_model_id))
                 torch.save({
@@ -171,7 +170,7 @@ def train(args, carry_on=False):
                     },
                     join(
                         args.mod_path,
-                        f'{idx}-{len(t_dataloader)}-model.pt'
+                        f'{idx}-{len_t_dataloader}-model.pt'
                     )
                 )
                 if not TRAIN_CFG.EARLY_STOP:
@@ -186,28 +185,25 @@ def train(args, carry_on=False):
                             'common_checkpoint.pth'
                         )
                     )
-
+            if idx % 500 == 0:
+                print(f" epoch={epoch+1}/{TRAIN_CFG.EPOCHS}, loss={loss.item()}")
             #TB Print train loss and histogram of parameters' distribution
-            writer.add_scalar(
-                f"T_loss_epoch_{epoch+1}",
-                torch.tensor(loss.item(),
-                dtype=torch.float
-            ), idx)
-            writer.add_scalar(
-                f"learning_rate_epoch_{epoch + 1}",
-                torch.tensor(lr_scheduler.get_last_lr(),
-                dtype=torch.float
-            ), idx)
+            writer.add_scalars(
+                f"Training Loss & Learning Rate (Epoch {epoch+1})", {
+                    "Loss": torch.tensor(loss.item(),dtype=torch.float),
+                    "LR": torch.tensor(lr_scheduler.get_last_lr(), dtype=torch.float)
+                }, idx
+            )
             for name, param in model.named_parameters():
                 if param.grad is not None:
-                  writer.add_histogram(tag=name+'_grad', values=param.grad, global_step=idx)
-                writer.add_histogram(tag=name+'_data', values=param.data, global_step=idx)
+                  writer.add_histogram(tag=name+'.grad', values=param.grad, global_step=idx)
+                writer.add_histogram(tag=name+'.data', values=param.data, global_step=idx)
 
         t_loss_avg = np.average(train_epoch_loss)
         t_acc = 100 * acc / nums
         train_epochs_loss.append(t_loss_avg)
         train_acc.append(t_acc)
-        print(f"train acc = {t_acc:.3f}%, loss = {t_loss_avg}")
+        print(f" Train Acc = {t_acc:.3f}%, Loss = {t_loss_avg}")
         #=====================valid============================
         if v_dataloader is not None:
             with torch.no_grad():
@@ -259,9 +255,8 @@ def train(args, carry_on=False):
 
     #TB Print Loss with epochs when epochs more than 1
     if TRAIN_CFG.EPOCHS > 1:
-        len_t_loss_epochs = len(train_epochs_loss)
-        len_v_loss_epochs = len(valid_epochs_loss)
-        for epoch in range(len_t_loss_epochs):
+        for epoch in range(len(train_epochs_loss)):
             writer.add_scalar("T_loss_epochs", train_epochs_loss[epoch], epoch+1)
-        for epoch in range(len_v_loss_epochs):
+        for epoch in range(len(valid_epochs_loss)):
             writer.add_scalar("V_loss_epochs", valid_epochs_loss[epoch], epoch+1)
+    writer.close()

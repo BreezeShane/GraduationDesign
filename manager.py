@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 from tvm.target import Target
 
 import torch
+import warnings
 
 from dl_svc.procedures.train import train
 from dl_svc.procedures.infer_et_test import test, inference
@@ -74,6 +75,7 @@ def list_targets():
 if __name__ == '__main__':
     if OS_NAME != "windows" and OS_NAME != "linux":
         raise OSError("Not supported operation system!")
+    warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
 
     parser = ArgumentParser()
 
