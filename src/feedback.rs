@@ -143,6 +143,23 @@ pub async fn handler_subm_fb(
             return Err((StatusCode::NOT_MODIFIED, "Insert feedback failed".to_string()));
         }
     }
+
+    let update_statement = client
+    .prepare("
+        UPDATE Account
+        SET contribution=$1
+        WHERE email=$2;
+    ")
+    .await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+    let contributions = files_with_label.len() as i16;
+    let row_update_count = client
+        .execute(&update_statement, &[&contributions, &useremail])
+        .await
+        .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+    if row_update_count < 1 {
+        return Err((StatusCode::NOT_MODIFIED, "Insert feedback failed".to_string()));
+    }
+
     Ok((StatusCode::OK, "Succeed to submit the feedback!".to_string()))
 }
 
@@ -450,9 +467,9 @@ fn __generate_insert_statement(file_unit: &FeedbackFileUnit) -> String {
     let stmt = match file_unit.label {
         Some(_) => {
             "
-                INSERT INTO TFeedback (time_stamp, from_user_email, time_out, pic_link, real_label)
+                INSERT INTO TFeedback (time_stamp, from_user_email, time_out, pic_link, real_label, submit_count)
                 VALUES
-                ($1, $2, $3, $4, $5)
+                ($1, $2, $3, $4, $5, $6)
             "
         },
         None => {
