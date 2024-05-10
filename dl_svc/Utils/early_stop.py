@@ -12,14 +12,14 @@ class EarlyStopping:
         Args:
             patience (int): How long to wait after last time validation loss improved.
                             Default: 7
-            verbose (bool): If True, prints a message for each validation loss improvement. 
+            verbose (bool): If True, prints a message for each validation loss improvement.
                             Default: False
             delta (float): Minimum change in the monitored quantity to qualify as an improvement.
                             Default: 0
             path (str): Path for the checkpoint to be saved to.
                             Default: 'checkpoint.pt'
             trace_func (function): trace print function.
-                            Default: print            
+                            Default: print
         """
         self.patience = patience
         self.verbose = verbose
@@ -38,7 +38,7 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, params, path)
         elif score < self.best_score + self.delta:
             self.counter += 1
-            self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            self.trace_func(f'\nEarlyStopping counter: {self.counter} out of {self.patience}\n')
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -50,14 +50,14 @@ class EarlyStopping:
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             self.trace_func(
-                'Validation loss decreased '
-                f'({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model...')
+                '\nValidation loss decreased '
+                f'({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model...\n')
         torch.save({
                 'name': params['name'],
-                'model': params['model'],
-                'opt': params['optimizer'],
-                'scheduler': params['scheduler']
+                'model': params['model_state_dict'],
+                'opt': params['optimizer_state_dict'],
+                'scheduler': params['lr_scheduler_state_dict']
             },
-            join(path, 'checkpoint.pth')
+            join(path, 'early_stop_checkpoint.pth')
         )
         self.val_loss_min = val_loss

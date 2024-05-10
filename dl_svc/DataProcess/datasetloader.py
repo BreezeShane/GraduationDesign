@@ -65,7 +65,7 @@ class IP102Dataset(Dataset):
         return len(self.label_data)
 
 
-def load_dataset(dataset_folder_path, record_file, class_file, shuffle=True, batch_size=None) -> DataLoader:
+def load_dataset(dataset_folder_path, record_file, class_file, shuffle=True, batch_size=1) -> DataLoader:
     """ load IP102 dataset by text file. """
     vocabulary, converter = text_process(dataset_folder_path, class_file, vec_dim=4)
     ip102_dataset = IP102Dataset(dataset_folder_path, record_file, converter, image_size=512)

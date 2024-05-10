@@ -29,7 +29,7 @@ def coca_vit_custom():
             # Required attention pooler args
             pooler_input_embed_dim=768,
             pooler_output_embed_dim=102,
-            pooler_n_head=8,
+            pooler_n_head=3,
             # Optional vision args
             image_size=512,
             num_channels=3,

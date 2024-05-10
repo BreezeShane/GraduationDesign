@@ -11,7 +11,7 @@ from tqdm import tqdm
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
-from peft import get_peft_model, LoraConfig, TaskType
+from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
 
 from dl_svc.DataProcess.datasetloader import load_dataset
 from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14
@@ -62,7 +62,9 @@ def train(args, carry_on=False):
         )
         model = get_peft_model(model, peft_config)
         peft_model_id = f"{model_name}_{peft_config.peft_type}_{peft_config.task_type}"
+        print("\n------------Using LoRA----------------")
         model.print_trainable_parameters()
+        print("--------------------------------------\n")
 
     if args.use_deepspeed:
         parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -87,18 +89,19 @@ def train(args, carry_on=False):
             )
 
     if carry_on:
-        checkpoint = torch.load(join(
-            args.mod_path if TRAIN_CFG.EARLY_STOP else CHECKPOINT_PATH,
-            'checkpoint.pth'
-            )
-        )
-        model.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['opt'])
-        lr_scheduler.load_state_dict(checkpoint['schedule'])
         if args.use_lora:
             # config = PeftConfig.from_pretrained(join(args.mod_path, peft_model_id))
             # model = PeftModel.from_pretrained(model, peft_model_id)
             model.load_state_dict(torch.load(join(args.mod_path, peft_model_id)), strict=False)
+        else:
+            if TRAIN_CFG.EARLY_STOP:
+                checkpoint_load_path = join(args.mod_path, 'early_stop_checkpoint.pth')
+            else:
+                checkpoint_load_path = join(CHECKPOINT_PATH, 'common_checkpoint.pth')
+            checkpoint = torch.load(checkpoint_load_path)
+            model.load_state_dict(checkpoint['model'])
+            optimizer.load_state_dict(checkpoint['opt'])
+            lr_scheduler.load_state_dict(checkpoint['schedule'])
         model.eval()
 
     loss_criterion = ContrastiveLossWithTemperature(
@@ -160,20 +163,63 @@ def train(args, carry_on=False):
             nums += labels.shape[0]
 
             len_t_dataloader = len(t_dataloader)
-            # Divided training data batches into 50 parts, each part would save the model, total 50 models.
-            if idx % (len_t_dataloader // 4) == 0 or idx == len_t_dataloader:
-                if args.use_lora:
-                    model.save_pretrained(join(args.mod_path, peft_model_id))
-                torch.save({
-                        'name': model_name,
-                        'model': model.state_dict()
-                    },
-                    join(
-                        args.mod_path,
-                        f'{idx}-{len_t_dataloader}-model.pt'
+            print(f" Epoch: {epoch+1}/{TRAIN_CFG.EPOCHS}, loss={loss.item()}")
+            # Print train loss and histogram of parameters' distribution
+            writer.add_scalars(
+                f"Training_Loss_et_Learning_Rate_Epoch_{epoch+1}", {
+                    "Loss": torch.tensor(loss.item(),dtype=torch.float),
+                    "LR": torch.tensor(lr_scheduler.get_last_lr(), dtype=torch.float)
+                }, idx
+            )
+            for name, param in model.named_parameters():
+                if param.grad is not None:
+                  writer.add_histogram(tag=name+'.grad', values=param.grad, global_step=idx)
+                writer.add_histogram(tag=name+'.data', values=param.data, global_step=idx)
+
+            if idx > 0 and (idx % (len_t_dataloader // 4) == 0 or idx == len_t_dataloader):
+                #=====================valid============================
+                if v_dataloader is not None:
+                    valid_epoch_loss = []
+                    acc, nums = 0., 0
+                    with torch.no_grad():
+                        model.eval()
+                        for vidx, (texts, inputs) in enumerate(tqdm(v_dataloader)):
+                            inputs = inputs.to(model.local_rank if args.use_deepspeed else args.device)
+                            texts = texts.to(model.local_rank if args.use_deepspeed else args.device)
+
+                            outputs = model(inputs, texts)
+                            loss = loss_criterion(outputs[0].squeeze(), outputs[1])
+
+                            valid_epoch_loss.append(loss.item())
+                            predictions = embedding_cosine_similarity(outputs[0].squeeze(), outputs[1]).argmax(dim=1)
+                            labels = texts[:, -1:].reshape(-1)
+                            acc += sum(predictions == labels).cpu()
+                            nums += labels.shape[0]
+                            #TB Print valid loss
+                            writer.add_scalar(f"V_Loss_BS_{idx}_Epoch_{epoch+1}", loss.item(), vidx)
+                    v_loss_avg = np.average(valid_epoch_loss)
+                    v_acc = 100 * acc / nums
+                    valid_epochs_loss.append(v_loss_avg)
+                    val_acc.append(v_acc)
+                    print("\n---------------------------------------------------------------------------------")
+                    print(f"| Epoch: {epoch+1} Iters: {idx} Valid Acc: {v_acc:.3f}%, Avg Loss: {v_loss_avg} |")
+                    print("---------------------------------------------------------------------------------\n")
+                #==================early stopping======================
+                if TRAIN_CFG.EARLY_STOP:
+                    early_stopping(
+                        valid_epochs_loss[-1],
+                        params={
+                            'name': model_name,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'lr_scheduler_state_dict': lr_scheduler.state_dict()
+                        },
+                        path=CHECKPOINT_PATH
                     )
-                )
-                if not TRAIN_CFG.EARLY_STOP:
+                    if early_stopping.early_stop:
+                        print("Early stopping...")
+                        break
+                else:
                     torch.save({
                             'name': model_name,
                             'model': model.state_dict(),
@@ -185,75 +231,39 @@ def train(args, carry_on=False):
                             'common_checkpoint.pth'
                         )
                     )
-            if idx % 500 == 0:
-                print(f" epoch={epoch+1}/{TRAIN_CFG.EPOCHS}, loss={loss.item()}")
-            #TB Print train loss and histogram of parameters' distribution
-            writer.add_scalars(
-                f"Training Loss & Learning Rate (Epoch {epoch+1})", {
-                    "Loss": torch.tensor(loss.item(),dtype=torch.float),
-                    "LR": torch.tensor(lr_scheduler.get_last_lr(), dtype=torch.float)
-                }, idx
-            )
-            for name, param in model.named_parameters():
-                if param.grad is not None:
-                  writer.add_histogram(tag=name+'.grad', values=param.grad, global_step=idx)
-                writer.add_histogram(tag=name+'.data', values=param.data, global_step=idx)
+                # #====================adjust lr========================
+                # lr_adjust = {
+                #         2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
+                #         10: 5e-7, 15: 1e-7, 20: 5e-8
+                #     }
+                # if epoch in lr_adjust.keys():
+                #     lr = lr_adjust[epoch]
+                #     for param_group in optimizer.param_groups:
+                #         param_group['lr'] = lr
+                #     print('Updating learning rate to {}'.format(lr))
+                if args.use_lora:
+                    model.save_pretrained(join(args.mod_path, peft_model_id))
+                else:
+                    torch.save({
+                            'name': model_name,
+                            'model': model.state_dict()
+                        },
+                        join(
+                            args.mod_path,
+                            f'{epoch+1}-{idx}-{len_t_dataloader}-model.pt'
+                        )
+                    )
+
 
         t_loss_avg = np.average(train_epoch_loss)
         t_acc = 100 * acc / nums
         train_epochs_loss.append(t_loss_avg)
         train_acc.append(t_acc)
-        print(f" Train Acc = {t_acc:.3f}%, Loss = {t_loss_avg}")
-        #=====================valid============================
-        if v_dataloader is not None:
-            with torch.no_grad():
-                model.eval()
-                valid_epoch_loss = []
-                acc, nums = 0., 0
-                for idx, (texts, inputs) in enumerate(tqdm(v_dataloader)):
-                    inputs = inputs.to(torch.float32).to(args.device)
-                    texts = texts.to(torch.float32).to(args.device)
-                    outputs = model(inputs)
-                    loss = loss_criterion(outputs, texts)
+        print("\n------------------------------------------------------------------------")
+        print(f"| Epoch {epoch+1} Latest Train Acc = {t_acc:.3f}%, Loss = {t_loss_avg} |")
+        print("------------------------------------------------------------------------\n")
 
-                    valid_epoch_loss.append(loss.item())
-                    acc += sum(outputs.max(axis=1)[1] == texts).cpu()
-                    nums += texts.size()[0]
-                    #TB Print valid loss
-                    writer.add_scalar(f"V_loss_epoch_{epoch+1}", loss.item(), idx)
-
-
-                v_loss_avg = np.average(valid_epoch_loss)
-                v_acc = 100 * acc / nums
-                valid_epochs_loss.append(v_loss_avg)
-                val_acc.append(v_acc)
-                print(f"epoch = {epoch+1}, valid acc = {v_acc:.3f}%, loss = {v_loss_avg}")
-        #==================early stopping======================
-        if TRAIN_CFG.EARLY_STOP:
-            early_stopping(
-                valid_epochs_loss[-1],
-                params={
-                    'name': model_name,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                },
-                path=args.mod_path
-            )
-            if early_stopping.early_stop:
-                print("Early stopping...\n")
-                break
-        # #====================adjust lr========================
-        # lr_adjust = {
-        #         2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
-        #         10: 5e-7, 15: 1e-7, 20: 5e-8
-        #     }
-        # if epoch in lr_adjust.keys():
-        #     lr = lr_adjust[epoch]
-        #     for param_group in optimizer.param_groups:
-        #         param_group['lr'] = lr
-        #     print('Updating learning rate to {}'.format(lr))
-
-    #TB Print Loss with epochs when epochs more than 1
+    # Print Loss with epochs when epochs more than 1
     if TRAIN_CFG.EPOCHS > 1:
         for epoch in range(len(train_epochs_loss)):
             writer.add_scalar("T_loss_epochs", train_epochs_loss[epoch], epoch+1)
