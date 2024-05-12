@@ -9,26 +9,31 @@ const UserInfo: React.FC<{ messageClient: NotificationInstance }> = (props) => {
     const [email, setEmail] = useState("");
     const [contribution, setContribution] = useState("");
     const [role, setRole] = useState("");
-    const current_useremail = sessionStorage.getItem('useremail');
 
-    if (current_useremail) {
-        axios.post(`/user/info/${current_useremail}`, {})
-        .then((res) => {
-            let response = res.data;
-            setNickName(response.nick_name);
-            setEmail(response.email);
-            setContribution(response.contribution);
-            setRole(response.role);
-        }).catch((err) => {
-            console.log(err);
-            messageClient.error({
-                message: `Failed to fetch your user info!`,
-                description: "You could try it again later!",
-                placement: 'topLeft',
-                duration: 2,
-            });
-        })
-    }
+    useEffect(() => {
+        const current_useremail = sessionStorage.getItem('useremail');
+        const current_token = sessionStorage.getItem('token');
+
+        if (current_token && current_useremail) {
+            axios.post(`/user/info/${current_useremail}`, {})
+            .then((res) => {
+                let response = res.data;
+                setNickName(response.nick_name);
+                setEmail(response.email);
+                setContribution(response.contribution);
+                setRole(response.role);
+            }).catch((err) => {
+                console.log(err);
+                messageClient.error({
+                    message: `Failed to fetch your user info!`,
+                    description: "You could try it again later!",
+                    placement: 'topLeft',
+                    duration: 2,
+                });
+            })
+        }
+    })
+
     return (
         <div style={{ width: "50%" }}>
             <div>

@@ -8,8 +8,7 @@ pub mod model_manager;
 pub mod authenticator;
 pub mod dl_svc;
 
-use std::{fs::copy, io, path::PathBuf, sync::{Arc, Mutex}};
-//use tokio::sync::Mutex;
+use std::{fs::copy, io, path::PathBuf, str::FromStr, sync::{Arc, Mutex}};
 use authenticator::{handler_sign_in, handler_sign_up, middleware_authorize, handler_transfer_permission_to_role};
 use dl_svc::handler_infer;
 use chrono::Local;
@@ -20,10 +19,10 @@ use feedback::{handler_acc_rej_fb, handler_fetch_trainable_fb, handler_fetch_ufb
 use model_manager::handler_fetch_all_models;
 use postgres::Client;
 use std::fs::read_dir;
-use tower_http::{trace::TraceLayer, cors::{CorsLayer, Any}};
+use tower_http::{cors::{Any, CorsLayer}, trace::TraceLayer};
 use tokio_postgres::{Config, NoTls};
 use axum::{
-    body::Bytes, extract::{DefaultBodyLimit, FromRef, MatchedPath}, http::{HeaderMap, Method, Request}, middleware, response::Response, routing::{get, post}, Router
+    body::Bytes, extract::{DefaultBodyLimit, FromRef, MatchedPath}, http::{HeaderMap, HeaderName, Method, Request}, middleware, response::Response, routing::{get, post}, Router
 };
 use user_manager::{handler_suspend_or_unsuspend_user, handler_user_info};
 use doc_database::{
@@ -102,7 +101,10 @@ async fn main() {
     let cors_layer = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_origin(Any)
-        .allow_headers(Any);
+        .allow_headers(Any)
+        .expose_headers([
+            HeaderName::from_str("auth-token").unwrap()
+        ]);
 
     let mut config = Config::new();
     config.host("localhost");

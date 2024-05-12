@@ -40,7 +40,6 @@ const SignInButton: React.FC<SignStatusProperty> = (props) => {
       useremail: values.useremail,
       password: values.password
     }).then(function (response) {
-      setAuthToken(JSON.stringify(response));
       messageClient.success({
         message: `Success to sign in!`,
         description: "Now you can use the insect identifier system!",

@@ -4,6 +4,7 @@ import { Layout, Result, notification } from 'antd';
 import NavBar from './Componets/NavBar';
 import ContentPanel from '@/app/Pages/ContentPanel';
 import { useEffect, useState } from 'react';
+import { setAuthToken } from './Utils';
 // import { Provider } from 'react-redux';
 // import { PersistGate } from 'redux-persist/integration/react';
 // import { store, persistor } from './Utils';
@@ -14,6 +15,16 @@ const { Header, Footer, Sider, Content } = Layout;
 axios.defaults.baseURL = `http://${process.env.BASE_URL}`;
 axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
 axios.defaults.headers.get['Content-Type'] = 'application/x-www-form-urlencoded';
+axios.interceptors.response.use(function (response) {
+  const token = response.headers['auth-token'];
+  if (token){
+    setAuthToken(token);
+  }
+  return response;
+}, function (error) {
+  // setAuthToken(undefined);
+  return Promise.reject(error);
+});
 
 const headerStyle: React.CSSProperties = {
   textAlign: 'center',
@@ -50,7 +61,7 @@ export default function Home() {
     let token = sessionStorage.getItem('token');
     let useremail = sessionStorage.getItem('useremail')
     if ( token && useremail ){
-      axios.defaults.headers.common['Authorization'] = token;
+      axios.defaults.headers.common['auth-token'] = token;
     }
   }, [])
   return (

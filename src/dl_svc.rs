@@ -25,9 +25,9 @@ pub async fn handler_infer(
 
     // Example Response
     let response : ResponseInferResult = vec![
-        ("./2024-03-31_18-46_1.png".to_string(), "flag".to_string()),
-        ("./2024-03-31_18-46.png".to_string(), "wore".to_string()),
-        ("./2024-03-31_18-47.png".to_string(), "mutate".to_string()),
+        ("./39181.jpg".to_string(), "odontothrips loti".to_string()),
+        ("./58237.jpg".to_string(), "Erythroneura apicalis".to_string()),
+        ("./66871.jpg".to_string(), "Dasineura sp".to_string()),
     ];
     let json_string = serde_json::to_string(&response).unwrap();
     return Ok(json_string);

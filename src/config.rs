@@ -13,6 +13,7 @@ pub const DATASETS_STORED_PATH: &str = "./datasets.db";
 
 // authenticator.rs
 pub const JWT_EXPIRATION: i64 = 3600 + 300; // 1h + 5min
+pub const JWT_REFRESH_PERIOD: i64 = 600;
 
 // feedback.rs
 pub const FEEDBACK_EXPIRATION: i64 = 3600 * 24 * 7; // 7 days

@@ -1,6 +1,7 @@
 use std::env;
 use std::ops::BitAnd;
 use axum::extract::Path;
+use axum::http::HeaderValue;
 use sha2::Sha384;
 use chrono::{TimeZone, Local};
 use deadpool_postgres::Pool;
@@ -9,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
 use jwt::{AlgorithmType, Error, Header, SignWithKey, Token, VerifyWithKey};
-use crate::config::JWT_EXPIRATION;
+use crate::config::{JWT_EXPIRATION, JWT_REFRESH_PERIOD};
 use crate::MultiState;
 
 use data_encoding::HEXUPPER;
@@ -212,10 +213,10 @@ pub fn verify_jwt(token: &String) -> Result<Claims, Error> {
     }
 }
 
-pub async fn handler_sign_in(
+pub async fn handler_sign_in<'a>(
     State(multi_state): State<MultiState>,
     Form(sign_in_form): Form<RequestAccountForSignIn>
-) -> Result<axum::Json<String>, (StatusCode, String)> {
+) -> Result<(HeaderMap, &'a str), (StatusCode, String)> {
     let client = multi_state.db_pool.get().await.unwrap();
     let user_request: RequestAccountForSignIn = sign_in_form;
 
@@ -262,7 +263,10 @@ pub async fn handler_sign_in(
     };
 
     let token = generate_jwt(claims).unwrap();
-    Ok(Json(token))
+    let mut headers = HeaderMap::new();
+    headers.insert("auth-token",
+        HeaderValue::from_str(token.as_str()).unwrap());
+    Ok((headers, "Succeeded to sign in!"))
 }
 
 pub async fn handler_sign_up(
@@ -341,28 +345,40 @@ pub async fn middleware_authorize(
     request: Request,
     next: Next
 ) -> Result<Response, (StatusCode, String)> {
-    match get_token(&headers) {
-        Some(token) if token_is_valid(&token) => {
-            let response = next.run(request).await;
-            Ok(response)
-        }
-        _ => Err((StatusCode::UNAUTHORIZED, "Token is expired or invalid!".to_string()))
+    let token_opt = get_token(&headers);
+    if let None = token_opt {
+        return Err((StatusCode::UNAUTHORIZED, "Token is invalid!".to_string()))
     }
+    let token = token_opt.unwrap();
+    let parse_result = verify_jwt(&token);
+    if let Err(err) = parse_result {
+        return Err(
+            (StatusCode::UNAUTHORIZED,
+                format!("Token is invalid or expired! Error: {err}")));
+    }
+
+    let mut response = next.run(request).await;
+
+    let mut claims = parse_result.unwrap();
+    if claims.expire_on as i64 - Local::now().timestamp() <= JWT_REFRESH_PERIOD {
+        claims.expire_on = (Local::now().timestamp() + JWT_EXPIRATION) as usize;
+        let new_token = generate_jwt(claims).unwrap();
+        response.headers_mut()
+        .insert("auth-token",
+            HeaderValue::from_str(new_token.as_str()).unwrap());
+    }
+
+    Ok(response)
 }
 
 fn get_token(headers: &HeaderMap) -> Option<String> {
-    let request_header = headers.get("Authorization").unwrap();
-    let raw_header_str = request_header.to_str().unwrap();
-    let header_json: serde_json::Value = serde_json::from_str(raw_header_str).unwrap();
-    let token = header_json.get("data").unwrap().as_str().unwrap();
-    Some(token.to_string())
-}
-
-fn token_is_valid(token: &String) -> bool {
-    match verify_jwt(token) {
-        Ok(_) => true,
-        _ => false
+    let __token_header_value = headers.get("auth-token");
+    if let None = __token_header_value {
+        return None;
     }
+    let __token_str = __token_header_value.unwrap().to_str().unwrap();
+    let __token = __token_str.to_string();
+    Some(__token)
 }
 
 fn encrypt(password_string: String) -> (String, String) {
