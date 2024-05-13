@@ -41,7 +41,7 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
     }).then(function (response) {
       messageClient.success({
         message: `Success to sign up a new account!`,
-        description: "Now you can go to sign in using this account!",
+        description: "Now you can go to sign in by this account!",
         placement: 'topLeft',
         duration: 2,
       });
@@ -114,9 +114,9 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
             name="password"
             rules={[{
               required: true,
-              // pattern:
-              //     /^(?![^a-zA-Z]+$)(?!\\D+$).{8,16}$/,
-              // message: "Need 8-16 characters containing letters and numbers",
+              pattern:
+                  /^(?![^a-zA-Z]+$)(?!\\D+$).{8,16}$/,
+              message: "Need 8-16 characters containing letters and numbers",
           }]}
           >
             <Input.Password size="large" placeholder="Password" prefix={<KeyOutlined />} />
@@ -134,6 +134,9 @@ const SignUpButton: React.FC<SignStatusProperty> = (props) => {
                       return Promise.reject('Please keep the same to your password above!');
                   },
               }),
+              {
+                required: true
+              }
           ]}
           >
             <Input.Password size="large" placeholder="Confirm Password" prefix={<KeyOutlined />} />

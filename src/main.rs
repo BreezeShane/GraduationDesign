@@ -35,7 +35,7 @@ use tower_http::classify::ServerErrorsFailureClass;
 use tracing::{info, info_span, Level, Span};
 use tracing_subscriber::fmt::{format::Writer, time::FormatTime};
 
-use crate::{config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH}, dl_svc::handler_authenticate_ssh, io_agent::handler_fetch_image, model_manager::handler_file_operation, user_manager::handler_fetch_all_users};
+use crate::{config::{MODEL_BACKUP_STORED_PATH, MODEL_STORED_PATH}, dl_svc::handler_authenticate_ssh, io_agent::handler_fetch_image, model_manager::handler_file_operation, user_manager::{handler_add_admin, handler_fetch_all_users}};
 
 // use axum_macros::debug_handler; // Important!
 
@@ -142,6 +142,7 @@ async fn main() {
 
         .route("/admin/feedback_manage", get(handler_fetch_trainable_fb).post(handler_acc_rej_fb))
         .route("/admin/user_manage", get(handler_fetch_all_users).post(handler_suspend_or_unsuspend_user))
+        .route("/admin/user_manage/add_admin", post(handler_add_admin))
         .route("/admin/model_manage", get(handler_fetch_all_models).post(handler_file_operation))
         // .route("/admin/:user_id/dataset_manage/:file_name", post(handler_upload_dset))
         .route("/admin/authenticate_ssh/:useremail", post(handler_authenticate_ssh))

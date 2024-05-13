@@ -21,7 +21,6 @@ use std::num::NonZeroU32;
 
 use axum::{
     Form,
-    Json,
     middleware::Next,
     extract::Request,
     response::Response,
@@ -76,6 +75,17 @@ pub fn role_to_string(permissions: i16) -> String {
         Role::CommonUser => "Common User".to_string(),
         Role::ModelAdmin => "Model Administrator".to_string(),
         Role::SuperRoot => "Super Root".to_string(),
+    }
+}
+
+pub fn string_to_role(role_string: String) -> Role {
+    let role = role_string.as_str();
+    match role {
+        "User Administrator" => Role::UserAdmin,
+        "Model Administrator" => Role::ModelAdmin,
+        "Super Root" => Role::SuperRoot,
+        "Common User" => Role::CommonUser,
+        _ => Role::CommonUser
     }
 }
 
@@ -145,6 +155,12 @@ pub struct RequestAccountForSignUp {
     password: String,
     repassword: String,
     email: String,
+}
+
+#[derive(Serialize, Deserialize, PostgresMapper)]
+#[pg_mapper (table = "Account")]
+pub struct AccountUnit {
+    email: String
 }
 
 pub async fn check_permission (connection: &Pool, useremail: &String, needed_permission: Permission) -> Result<bool, (StatusCode, String)> {
@@ -271,17 +287,17 @@ pub async fn handler_sign_in<'a>(
 pub async fn handler_sign_up(
     State(multi_state): State<MultiState>,
     Form(sign_up_form): Form<RequestAccountForSignUp>
-) -> Result<axum::Json<String>, (StatusCode, String)> {
+) -> Result<String, (StatusCode, String)> {
     let client = multi_state.db_pool.get().await.unwrap();
 
     let user_request = sign_up_form;
     if user_request.password != user_request.repassword {
-        return Err((StatusCode::NON_AUTHORITATIVE_INFORMATION, "The passwords should be the same!".to_string()))
+        return Err((StatusCode::NOT_ACCEPTABLE, "The passwords should be the same!".to_string()))
     }
 
     let query_statement = client
     .prepare("
-        SELECT email, permissions, available FROM account WHERE email=$1;
+        SELECT email, available, permissions FROM account WHERE email=$1;
     ")
     .await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
@@ -300,7 +316,7 @@ pub async fn handler_sign_up(
             let available = true;
             let permissions = Role::CommonUser as i16;
             let (passwd_salt, passwd_hash) =
-                encrypt(user_request.password);
+                encrypt_password(user_request.password);
 
             let insert_statement = client
             .prepare("
@@ -327,7 +343,7 @@ pub async fn handler_sign_up(
             if rows < 1 {
                 return Err((StatusCode::NOT_MODIFIED, "Register account failed".to_string()));
             }
-            Ok(Json("Succeeded to sign up!".to_string()))
+            Ok("Succeeded to sign up!".to_string())
         },
         Some(_) => {
             Err((StatusCode::CONFLICT, "The email has been used!".to_string()))
@@ -380,7 +396,7 @@ fn get_token(headers: &HeaderMap) -> Option<String> {
     Some(__token)
 }
 
-fn encrypt(password_string: String) -> (String, String) {
+pub fn encrypt_password(password_string: String) -> (String, String) {
     let n_iter = NonZeroU32::new(100_000).unwrap();
     let rng = rand::SystemRandom::new();
 

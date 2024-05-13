@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
 
-use crate::{authenticator::{check_permission, role_to_string, Permission}, MultiState};
+use crate::{authenticator::{check_permission, encrypt_password, role_to_string, string_to_role, Permission, AccountUnit}, MultiState};
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestUserManagement {
@@ -57,6 +57,26 @@ pub struct ResponseUserManageUnit {
 struct User2Operate {
     email: String,
     available: bool
+}
+
+#[derive(Serialize, Deserialize, PostgresMapper)]
+#[pg_mapper (table = "Account")]
+struct Admin2Add {
+    nick_name: String,
+    password_salt: String,
+    password_hash: String,
+    email: String,
+    permissions: i16
+}
+
+#[derive(Deserialize)]
+pub struct RequestAdminAdd {
+    admin_email: String,
+    username: String,
+    useremail: String,
+    password: String,
+    repassword: String,
+    role: String
 }
 
 pub async fn handler_fetch_all_users(
@@ -185,4 +205,76 @@ pub async fn handler_user_info(
     };
 
     Ok(Json(response))
+}
+
+pub async fn handler_add_admin(
+    State(multi_state): State<MultiState>,
+    Form(request_add_admin): Form<RequestAdminAdd>
+) -> Result<String, (StatusCode, String)> {
+    if !check_permission(&multi_state.db_pool, &request_add_admin.admin_email, Permission::MngUsr).await.unwrap() {
+        return Err(
+            (StatusCode::FORBIDDEN, "Not permitted!".to_string())
+        );
+    }
+
+    let client = multi_state.db_pool.get().await.unwrap();
+
+    if request_add_admin.password != request_add_admin.repassword {
+        return Err((StatusCode::NOT_ACCEPTABLE, "The passwords should be the same!".to_string()))
+    }
+
+    let query_statement = client
+    .prepare("
+        SELECT email FROM account WHERE email=$1;
+    ")
+    .await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+
+    let account = client
+    .query(&query_statement, &[&request_add_admin.useremail])
+    .await
+    .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
+    .iter()
+    .map(|row| AccountUnit::from_row_ref(row).unwrap())
+    .collect::<Vec<AccountUnit>>()
+    .pop();
+
+    match account {
+        None => {
+            let contribute: i16 = 0;
+            let available = true;
+            let permissions = string_to_role(request_add_admin.role) as i16;
+            let (passwd_salt, passwd_hash) =
+                encrypt_password(request_add_admin.password);
+
+            let insert_statement = client
+            .prepare("
+                INSERT INTO account (nick_name, password_salt, password_hash, email, contribution, available, permissions)
+                VALUES
+                ($1, $2, $3, $4, $5, $6, $7)
+            ").await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+
+            // let rows = client
+            // .execute(&insert_statement,
+            //     &[ &user_request.username, &passwd_salt, &passwd_hash, &user_request.email,
+            //         &contribute, &available, &permissions]
+            // )
+            // .await
+            // .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+            let rows = client
+            .execute(&insert_statement,
+                &[ &request_add_admin.username, &passwd_salt, &passwd_hash, &request_add_admin.useremail,
+                    &contribute, &available, &permissions]
+            )
+            .await
+            .map_err(|err| (StatusCode::NOT_MODIFIED, err.to_string()))?;
+
+            if rows < 1 {
+                return Err((StatusCode::NOT_MODIFIED, "Register account failed".to_string()));
+            }
+            Ok("Succeeded to sign up an admin!".to_string())
+        },
+        Some(_) => {
+            Err((StatusCode::CONFLICT, "The email has been used!".to_string()))
+        }
+    }
 }
