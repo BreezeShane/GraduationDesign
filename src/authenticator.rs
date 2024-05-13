@@ -55,17 +55,17 @@ macro_rules! back_to_enum {
 }
 
 back_to_enum! {
-    /// Manage_Feedback Manage_User Manage_Model Train&Upload_Model&View_Training_Effect Common
-    /// 0/1             0/1         0/1          0/1                                     0/1
+    /// Manage_Feedback Manage_User Manage_Model Common
+    /// 0/1             0/1         0/1          0/1
     /// Permission: Enum
     /// Permission::<Role>: isize
     /// Each bit means status of the matched permission.
     #[derive(Serialize, Deserialize, Debug)]
     pub enum Role {
-        UserAdmin   =   0b11001isize,
-        ModelAdmin  =   0b00111isize,
-        CommonUser  =   0b00001isize,
-        SuperRoot   =   0b11111isize,
+        UserAdmin   =   0b1101isize,
+        ModelAdmin  =   0b0011isize,
+        CommonUser  =   0b0001isize,
+        SuperRoot   =   0b1111isize,
     }
 }
 
@@ -80,11 +80,10 @@ pub fn role_to_string(permissions: i16) -> String {
 }
 
 pub enum Permission {
-    MngFeedBack =   0b10000isize,
-    MngUsr      =   0b01000isize,
-    MngModel    =   0b00100isize,
-    TUV         =   0b00010isize,
-    Common      =   0b00001isize
+    MngFeedBack =   0b1000isize,
+    MngUsr      =   0b0100isize,
+    MngModel    =   0b0010isize,
+    Common      =   0b0001isize
 }
 
 impl BitAnd<Permission> for Role {
