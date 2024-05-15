@@ -198,6 +198,8 @@ To use the project, run `pip install -r requirements.txt` first.
 
     The IP102 dataset contains more than 75,000 images belongs to 102 categories. [Source](https://drive.google.com/drive/folders/1svFSy2Da3cVMvekBwe13mzyx38XZ9xWo?usp=sharing) The dataset contains 45,095 images in the training set, 7,508 images in the validation set, and 22,619 images in the testing set for classification task.
 
+The project searched for the translation and relative wiki of those classes mainly according to [作物病虫害识别数据集资源合集](https://aitechtogether.com/article/45878.html). Greatly thanks for the author's excellent work! It has saved so many efforts in developing custom_hash_map.rs.
+
 > The HTML code of tables comes from here: [Tables Generator](https://www.tablesgenerator.com/html_tables)
 
 <details>
