@@ -79,7 +79,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
 
     parser.add_argument('mode', type=str,
-        choices=['train', 'valid', 'compile_model', 'show_graphs', 'list_targets'],
+        choices=['train', 'compile_model', 'show_graphs', 'list_targets'],
         help="Toggle to the mode you want to run.")
 
     # Optional for Train, Valid and Infer
@@ -120,16 +120,6 @@ if __name__ == '__main__':
     train_group_parser.add_argument('--use_deepspeed', action='store_true', default=False,
         help="Apply to use DeepSpeed.")
 
-    # mode valid
-    valid_group_parser = parser.add_argument_group(title='Validate Mode')
-    # -------------------------------------------------------------------- #
-
-    # mode infer
-    infer_group_parser = parser.add_argument_group(title='Inference Mode')
-    # -------------------------------------------------------------------- #
-    infer_group_parser.add_argument('--images', dest='iset', type=str,
-        help="The path to the folder containing images to inference.")
-
     # mode compile_model
     compile_group_parser = parser.add_argument_group(title='Compile Mode')
     # -------------------------------------------------------------------- #
@@ -162,8 +152,6 @@ if __name__ == '__main__':
     match args.mode:
         case 'train':
             train(args, carry_on=args.carry_on)
-        case 'valid':
-            test(args)
         case 'compile_model':
             compile_model(args)
         case 'show_graphs':
