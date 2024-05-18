@@ -167,7 +167,7 @@ def train(args, carry_on=False):
                   writer.add_histogram(tag=name+'.grad', values=param.grad, global_step=idx)
                 writer.add_histogram(tag=name+'.data', values=param.data, global_step=idx)
 
-            if idx > 0 and (idx % (len_t_dataloader // 4) == 0 or idx == len_t_dataloader):
+            if idx > 0 and (idx % (len_t_dataloader // 10) == 0 or idx == len_t_dataloader):
                 #=====================valid============================
                 if v_dataloader is not None:
                     valid_epoch_loss = []
