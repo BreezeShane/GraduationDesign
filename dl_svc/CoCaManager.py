@@ -82,20 +82,6 @@ if __name__ == '__main__':
         choices=['train', 'compile_model', 'show_graphs', 'list_targets'],
         help="Toggle to the mode you want to run.")
 
-    # Optional for Train, Valid and Infer
-    parser.add_argument('--use_lora', action='store_true', default=False,
-        help="Apply to use Low-Rank Adaptation, which known as LoRA.")
-
-
-    # Optional for Valid and Infer
-    parser.add_argument('--gpu_id', type=int,
-        help='The GPU ID loading model. Use single GPU.')
-    parser.add_argument('--load_model_path', dest='mod_loc',
-        default='./models', type=str,
-        help="The path to tained model.")
-    parser.add_argument('--lora_path', type=str,
-        help="Load model while applying LoRA, so please enable use_lora"
-             " and give the path to LoRA models.")
 
     # mode train
     train_group_parser = parser.add_argument_group(title='Train Mode')
@@ -119,6 +105,8 @@ if __name__ == '__main__':
         help="Set True to continue training the model.")
     train_group_parser.add_argument('--use_deepspeed', action='store_true', default=False,
         help="Apply to use DeepSpeed.")
+    train_group_parser.add_argument('--use_lora', action='store_true', default=False,
+        help="Apply to use Low-Rank Adaptation, which known as LoRA.")
 
     # mode compile_model
     compile_group_parser = parser.add_argument_group(title='Compile Mode')
@@ -142,7 +130,6 @@ if __name__ == '__main__':
         help="Set the search time. Only needed on compiling large model.")
     compile_group_parser.add_argument('--set_timeout', dest='timeout', default=10, type=int,
         help="Set the timeout on each tuning step. Only needed on compiling large model.")
-    # mode valid (Optional for mode train)
 
     args = parser.parse_args()
 
