@@ -1,3 +1,0 @@
-"""
-    Prune Model Procedure Definition.
-"""
