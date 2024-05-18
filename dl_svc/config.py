@@ -7,14 +7,14 @@ from yacs.config import CfgNode as CN
 # CHECKPOINT_PATH = 'checkpoint/'
 # TENSORBOARD_DATA_PATH = 'log/'
 CHECKPOINT_PATH = '/hy-tmp/checkpoint/'
-TENSORBOARD_DATA_PATH = '/tf_logs/'
+TENSORBOARD_DATA_PATH = '../tf_logs/'
 OS_NAME = platform.system().lower()
 IMG_TYPE_LIST = {'jpg','bmp','png','jpeg','rgb','tif'}
 
 TRAIN_CFG = CN()
 # ----------------------------#
 TRAIN_CFG.SEED = 42
-TRAIN_CFG.BATCH_SIZE = 64
+TRAIN_CFG.BATCH_SIZE = 56
 TRAIN_CFG.LR = 1e-5
 TRAIN_CFG.WARM_UP = True
 TRAIN_CFG.EPOCHS = 1

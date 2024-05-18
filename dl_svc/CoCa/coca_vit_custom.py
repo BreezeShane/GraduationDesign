@@ -16,7 +16,7 @@ def coca_vit_custom():
             vision_n_head=12,
             # Required text args
             vocab_size=194,
-            num_text_positions=6,
+            num_text_positions=512,
             text_hidden_dim=512,
             text_n_layer=12,
             text_n_head=8,
