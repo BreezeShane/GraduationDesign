@@ -32,8 +32,8 @@ def train(args, carry_on=False):
     """ Train CoCa Vit Model. """
     setup_seed(TRAIN_CFG.SEED)
 
-    t_dataloader = load_dataset(args.tset, "train.txt", "class.txt", batch_size=TRAIN_CFG.BATCH_SIZE)
-    v_dataloader = load_dataset(args.vset, "val.txt", "class.txt", shuffle=False)
+    t_dataloader = load_dataset(args.tset, "train.txt", args.cls_path, batch_size=TRAIN_CFG.BATCH_SIZE)
+    v_dataloader = load_dataset(args.vset, "val.txt", args.cls_path, shuffle=False)
 
     match args.model_type:
         case 'large':

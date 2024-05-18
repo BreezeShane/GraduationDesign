@@ -128,22 +128,21 @@ class Converter:
         return self.word_vecs[label]
 
 
-def text_process(dataset_folder_path, record_file, vec_dim=4):
+def text_process(class_file_path, vec_dim=4):
     """ Process text file to Vocabulary Dict and WordVec Dict. """
-    species_file_path = join(dataset_folder_path, record_file)
     vocab = Vocabulary("SpeciesDict")
     cvrt = Converter("SpeciesVectorsDict", vocab)
-    vocab(species_file_path)
-    cvrt(species_file_path, vec_dim=vec_dim)
+    vocab(class_file_path)
+    cvrt(class_file_path, vec_dim=vec_dim)
     return vocab, cvrt
 
-if __name__ == "__main__":
-    species_file_path = "./datasets/IP102_v1.1/class.txt"
-    vocab = Vocabulary("SpeciesDict")
-    cvrt = Converter("SpeciesVectorsDict", vocab)
-    vocab(species_file_path)
-    cvrt(species_file_path, vec_dim=4)
-    _dict = cvrt.get_word_vecs()
-    for item in _dict:
-        print(item)
-    print(cvrt.max_vec_dim)
+# if __name__ == "__main__":
+#     species_file_path = "./datasets/IP102_v1.1/class.txt"
+#     vocab = Vocabulary("SpeciesDict")
+#     cvrt = Converter("SpeciesVectorsDict", vocab)
+#     vocab(species_file_path)
+#     cvrt(species_file_path, vec_dim=4)
+#     _dict = cvrt.get_word_vecs()
+#     for item in _dict:
+#         print(item)
+#     print(cvrt.max_vec_dim)

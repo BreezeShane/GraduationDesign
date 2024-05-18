@@ -95,6 +95,8 @@ if __name__ == '__main__':
         help="The path to train dataset folder for loading.")
     train_group_parser.add_argument('--text', type=str, required=True,
         help="The path to folder containing species dictionary for train dataset.")
+    train_group_parser.add_argument('--cls', dest='cls_path', type=str, required=True,
+        help="The path to text file containing species' name in train dataset.")
     train_group_parser.add_argument('--vset', type=str, required=True,
         help=
         "The path to validate dataset folder for loading. And enable to validate while training.")
@@ -145,6 +147,10 @@ if __name__ == '__main__':
     submodel_group_parser.add_argument('--smodel_type', type=str, default="normal",
         choices=["normal", "lora", "deepspeed"],
         help="The pretrained model type.")
+    submodel_group_parser.add_argument('--siset', type=str,
+        help="The path to validating dataset folder.")
+    submodel_group_parser.add_argument('--scls', dest='scls_path', type=str,
+        help="The path to text file containing species' name in train dataset.")
 
 
     args = parser.parse_args()
