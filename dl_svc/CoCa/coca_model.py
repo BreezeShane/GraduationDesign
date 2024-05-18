@@ -1,5 +1,5 @@
 """
-COCA Model Definition.
+    CoCa Model Definition.
 """
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
@@ -14,8 +14,8 @@ from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
-from dl_svc.COCA.multimodal_decoder import CoCaMultimodalDecoder
-from dl_svc.COCA.text_decoder import CoCaTextDecoder
+from dl_svc.CoCa.multimodal_decoder import CoCaMultimodalDecoder
+from dl_svc.CoCa.text_decoder import CoCaTextDecoder
 from dl_svc.Encoder.vision_transformer import vision_transformer
 from dl_svc.Layers.attention_pooler import (
     AttentionPooler,
@@ -359,7 +359,7 @@ def coca_vit(
 
 
 def coca_vit_b_32() -> CoCaModel:
-    """ Return COCA Vit Base Model. """
+    """ Return CoCa Vit Base Model. """
     return coca_vit(
         vision_patch_size=32,
         vision_n_layer=12,
@@ -385,7 +385,7 @@ def coca_vit_b_32() -> CoCaModel:
 
 
 def coca_vit_l_14() -> CoCaModel:
-    """ Return COCA Vit Large Model. """
+    """ Return CoCa Vit Large Model. """
     return coca_vit(
         vision_patch_size=14,
         vision_n_layer=24,

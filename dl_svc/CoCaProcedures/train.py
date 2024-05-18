@@ -1,5 +1,5 @@
 """
-    Training COCA Vit Definition.
+    Training CoCa Vit Definition.
 """
 import math
 import random
@@ -15,8 +15,8 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmResta
 from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
 
 from dl_svc.DataProcess.datasetloader import load_dataset
-from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14
-from dl_svc.COCA.coca_vit_custom import coca_vit_custom
+from dl_svc.CoCa.coca_model import coca_vit_b_32, coca_vit_l_14
+from dl_svc.CoCa.coca_vit_custom import coca_vit_custom
 from dl_svc.Loss.CoCa_loss import CoCaLoss
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
 from dl_svc.Utils.early_stop import EarlyStopping
@@ -37,7 +37,7 @@ def embedding_cosine_similarity(matrix_1, matrix_2):
     return x
 
 def train(args, carry_on=False):
-    """ Train COCA Vit Model. """
+    """ Train CoCa Vit Model. """
     setup_seed(TRAIN_CFG.SEED)
 
     t_dataloader = load_dataset(args.tset, "train.txt", "class.txt", batch_size=TRAIN_CFG.BATCH_SIZE)

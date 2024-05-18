@@ -1,5 +1,5 @@
 """
-    Generate Formatted Dataset for fitting COCA model.
+    Generate Formatted Dataset for fitting CoCa model.
     The code is not used for the project directly. It can be run directly.
 """
 from os import mkdir
@@ -67,7 +67,7 @@ class DatasetGenerator:
 
 if __name__ == "__main__":
     SRC_DATASET_PATH = "./datasets/IP102_v1.1/"
-    DEST_DATASET_PATH = "./datasets/IP102_for_COCA"
+    DEST_DATASET_PATH = "./datasets/IP102_for_CoCa"
 
     train_dataset_list = DatasetGenerator(SRC_DATASET_PATH, DEST_DATASET_PATH, "train", "train.txt")
     valid_dataset_list = DatasetGenerator(SRC_DATASET_PATH, DEST_DATASET_PATH, "valid", "val.txt")

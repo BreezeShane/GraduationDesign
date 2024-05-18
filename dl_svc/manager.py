@@ -9,9 +9,8 @@ from tvm.target import Target
 import torch
 import warnings
 
-from dl_svc.procedures.train import train
-from dl_svc.procedures.infer_et_test import test, inference
-from dl_svc.procedures.compile_model import compile_model
+from dl_svc.CoCaProcedures.train import train
+from dl_svc.CoCaProcedures.compile_model import compile_model
 from dl_svc.config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH, OS_NAME
 
 def init_dirs(arguments):
@@ -80,7 +79,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
 
     parser.add_argument('mode', type=str,
-        choices=['train', 'valid', 'compile_model', 'infer', 'show_graphs', 'list_targets'],
+        choices=['train', 'valid', 'compile_model', 'show_graphs', 'list_targets'],
         help="Toggle to the mode you want to run.")
 
     # Optional for Train, Valid and Infer
@@ -165,8 +164,6 @@ if __name__ == '__main__':
             train(args, carry_on=args.carry_on)
         case 'valid':
             test(args)
-        case 'infer':
-            result = inference(args)
         case 'compile_model':
             compile_model(args)
         case 'show_graphs':
