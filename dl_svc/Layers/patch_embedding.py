@@ -11,7 +11,7 @@ from typing import Iterable, NamedTuple, Optional, Tuple, Union
 import torch
 from torch import nn, Tensor
 
-from dl_svc.Masking.random_masking import (
+from Masking.random_masking import (
     random_masking,
     random_masking_2d,
 )

@@ -14,13 +14,13 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
 from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
 
-from dl_svc.DataProcess.datasetloader import load_dataset
-from dl_svc.CoCa.coca_model import coca_vit_b_32, coca_vit_l_14
-from dl_svc.CoCa.coca_vit_custom import coca_vit_custom
-from dl_svc.Loss.CoCa_loss import CoCaLoss
-from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
-from dl_svc.Utils.early_stop import EarlyStopping
-from dl_svc.config import TRAIN_CFG, TENSORBOARD_DATA_PATH, CHECKPOINT_PATH
+from DataProcess.datasetloader import load_dataset
+from CoCa.coca_model import coca_vit_b_32, coca_vit_l_14
+from CoCa.coca_vit_custom import coca_vit_custom
+from Loss.CoCa_loss import CoCaLoss
+from Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
+from Utils.early_stop import EarlyStopping
+from config import TRAIN_CFG, TENSORBOARD_DATA_PATH, CHECKPOINT_PATH
 
 def setup_seed(seed):
     """ Set Seed for Replicability. """

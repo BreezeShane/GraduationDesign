@@ -9,9 +9,9 @@ from tvm.target import Target
 import torch
 import warnings
 
-from dl_svc.CoCaProcedures.train import train
-from dl_svc.CoCaProcedures.compile_model import compile_model
-from dl_svc.config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH, OS_NAME
+from CoCaProcedures.train import train
+from CoCaProcedures.compile_model import compile_model
+from config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH, OS_NAME
 
 def init_dirs(arguments):
     """ Initialize the directories needed. """

@@ -15,13 +15,13 @@ import torch
 from torch import nn, Tensor
 from torchvision.ops.stochastic_depth import StochasticDepth
 
-from dl_svc.Layers.mlp import MLP
-from dl_svc.Layers.multi_head_attention import (
+from Layers.mlp import MLP
+from Layers.multi_head_attention import (
     MHAWithCacheOutput,
     MultiHeadAttentionWithCache,
     MultiHeadSelfAttention,
 )
-from dl_svc.Layers.normalizations import Fp32LayerNorm
+from Layers.normalizations import Fp32LayerNorm
 
 
 class TransformerOutput(NamedTuple):

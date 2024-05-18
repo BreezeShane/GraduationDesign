@@ -8,8 +8,8 @@ from PIL import Image
 import torch
 from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
-from dl_svc.config import IMG_TYPE_LIST
-from dl_svc.DataProcess.text_processor import text_process, Converter
+from config import IMG_TYPE_LIST
+from DataProcess.text_processor import text_process, Converter
 
 
 class IP102Dataset(Dataset):

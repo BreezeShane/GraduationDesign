@@ -7,11 +7,11 @@ import numpy as np
 from tqdm import tqdm
 import torch
 
-from dl_svc.DataProcess.datasetloader import load_dataset, load_data
-from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
-from dl_svc.CoCa.coca_model import coca_vit_b_32, coca_vit_l_14
-from dl_svc.CoCa.coca_vit_custom import coca_vit_custom
-from dl_svc.Encoder.vision_transformer import vision_transformer
+from DataProcess.datasetloader import load_dataset, load_data
+from Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
+from CoCa.coca_model import coca_vit_b_32, coca_vit_l_14
+from CoCa.coca_vit_custom import coca_vit_custom
+from Encoder.vision_transformer import vision_transformer
 
 def test(args):
     """ Definition of validation procedure. """

@@ -2,7 +2,7 @@
     CoCa Vit Custom Model Definition. 
 """
 from torch import nn
-from dl_svc.CoCa.coca_model import coca_vit
+from CoCa.coca_model import coca_vit
 
 def coca_vit_custom():
     """

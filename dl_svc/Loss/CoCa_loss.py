@@ -1,8 +1,8 @@
 from torch import Tensor
 from torch.nn import CrossEntropyLoss
 
-from dl_svc.config import TRAIN_CFG
-from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
+from config import TRAIN_CFG
+from Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
 
 class CoCaLoss:
     def __init__():

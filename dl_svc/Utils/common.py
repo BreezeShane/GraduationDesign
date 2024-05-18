@@ -16,7 +16,7 @@ from typing import Any, Callable, List, Tuple, Union
 import torch
 from torch import nn, Tensor
 from torch.utils.checkpoint import checkpoint
-from dl_svc.Utils.file_io import _get_path_manager
+from Utils.file_io import _get_path_manager
 
 
 

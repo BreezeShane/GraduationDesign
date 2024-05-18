@@ -11,7 +11,7 @@ from typing import List
 
 import torch
 from torch import nn, Tensor
-from dl_svc.Layers.multi_head_attention import MultiHeadAttentionWithCache
+from Layers.multi_head_attention import MultiHeadAttentionWithCache
 
 
 class AttentionPooler(nn.Module):

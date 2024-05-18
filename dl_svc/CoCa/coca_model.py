@@ -14,15 +14,15 @@ from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
-from dl_svc.CoCa.multimodal_decoder import CoCaMultimodalDecoder
-from dl_svc.CoCa.text_decoder import CoCaTextDecoder
-from dl_svc.Encoder.vision_transformer import vision_transformer
-from dl_svc.Layers.attention_pooler import (
+from CoCa.multimodal_decoder import CoCaMultimodalDecoder
+from CoCa.text_decoder import CoCaTextDecoder
+from Encoder.vision_transformer import vision_transformer
+from Layers.attention_pooler import (
     AttentionPooler,
     CascadedAttentionPooler,
 )
-from dl_svc.Layers.transformer import TransformerOutput
-from dl_svc.Loss.contrastive_loss_with_temperature import (
+from Layers.transformer import TransformerOutput
+from Loss.contrastive_loss_with_temperature import (
     ContrastiveLossWithTemperature,
 )
 

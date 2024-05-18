@@ -12,8 +12,8 @@ from typing import Callable, Optional, Tuple
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
-from dl_svc.Layers.transformer import TransformerDecoder
-from dl_svc.Utils.attention import get_causal_attention_mask
+from Layers.transformer import TransformerDecoder
+from Utils.attention import get_causal_attention_mask
 
 
 class CoCaTextEmbeddings(nn.Module):

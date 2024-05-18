@@ -14,7 +14,7 @@ from typing import Any, Dict, Optional, OrderedDict, Tuple, Union
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
-from dl_svc.Utils.distributed import BackpropType, gather_tensor
+from Utils.distributed import BackpropType, gather_tensor
 
 
 @dataclass

@@ -9,12 +9,12 @@ from typing import Any, Callable, Optional, Tuple, Union
 import torch
 
 from torch import nn, Tensor
-from dl_svc.Layers.patch_embedding import PatchEmbeddings
-from dl_svc.Layers.transformer import (
+from Layers.patch_embedding import PatchEmbeddings
+from Layers.transformer import (
     TransformerEncoder,
     TransformerOutput,
 )
-from dl_svc.Utils.common import load_module_from_url
+from Utils.common import load_module_from_url
 
 
 class VisionTransformer(nn.Module):
