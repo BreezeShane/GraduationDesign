@@ -1,7 +1,6 @@
 """
     Training CoCa Vit Definition.
 """
-import math
 import random
 from os.path import join
 import torch
@@ -20,15 +19,8 @@ from CoCa.coca_vit_custom import coca_vit_custom
 from Loss.CoCa_loss import CoCaLoss
 from Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
 from Utils.early_stop import EarlyStopping
+from Utils.random_seed import setup_seed
 from config import TRAIN_CFG, TENSORBOARD_DATA_PATH, CHECKPOINT_PATH
-
-def setup_seed(seed):
-    """ Set Seed for Replicability. """
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.backends.cudnn.deterministic = True
 
 def embedding_cosine_similarity(matrix_1, matrix_2):
     x = matrix_1.mul(matrix_2)
@@ -116,11 +108,11 @@ def train(args, carry_on=False):
         )
     writer = SummaryWriter(TENSORBOARD_DATA_PATH)
     #TB Print Model
-    print(summary(model, [ (1, 3, 512, 512), (1, 6) ],
+    print(summary(model, [ (1, 3, 512, 512), (1, 512) ],
         dtypes=[torch.float, torch.long], device="cpu"))
     writer.add_graph(model, input_to_model=[
-        torch.rand(1, 3, 512, 512),         # image
-        torch.randint(0, 194, size=(1, 6))  # text
+        torch.rand(1, 3, 512, 512),             # image
+        torch.randint(0, 194, size=(1, 512))    # text
     ])
 
     model.to(args.device)
@@ -132,7 +124,7 @@ def train(args, carry_on=False):
         model.train()
         train_epoch_loss = []
 
-        for idx, (texts, inputs) in enumerate(tqdm(t_dataloader)):
+        for idx, (texts, inputs) in enumerate(tqdm(t_dataloader, desc="Training: ", position=0, leave=True)):
             inputs = inputs.to(model.local_rank if args.use_deepspeed else args.device)
             texts = texts.to(model.local_rank if args.use_deepspeed else args.device)
 
@@ -153,27 +145,36 @@ def train(args, carry_on=False):
                 lr_scheduler.step()
 
             train_epoch_loss.append(loss.item())
-            len_t_dataloader = len(t_dataloader)
-            print(f" Epoch: {epoch+1}/{TRAIN_CFG.EPOCHS}, loss={loss.item()}")
+            # print(f" Epoch: {epoch+1}/{TRAIN_CFG.EPOCHS}, loss={loss.item()}")
             # Print train loss and histogram of parameters' distribution
-            writer.add_scalars(
-                f"Training_Loss_et_Learning_Rate_Epoch_{epoch+1}", {
-                    "Loss": torch.tensor(loss.item(),dtype=torch.float),
-                    "LR": torch.tensor(lr_scheduler.get_last_lr(), dtype=torch.float)
-                }, idx
+            writer.add_scalar(
+                f"Training_Loss_Epoch_{epoch+1}",
+                torch.tensor(loss.item(),dtype=torch.float), idx
             )
+            writer.add_scalar(
+                f"Learning_Rate_Epoch_{epoch+1}",
+                torch.tensor(lr_scheduler.get_last_lr(), dtype=torch.float), idx
+            )
+            # writer.add_scalars(
+            #     f"Training_Loss_et_Learning_Rate_Epoch_{epoch+1}", {
+            #         "Loss": torch.tensor(loss.item(),dtype=torch.float),
+            #         "LR": torch.tensor(lr_scheduler.get_last_lr(), dtype=torch.float)
+            #     }, idx
+            # )
+
             for name, param in model.named_parameters():
                 if param.grad is not None:
                   writer.add_histogram(tag=name+'.grad', values=param.grad, global_step=idx)
                 writer.add_histogram(tag=name+'.data', values=param.data, global_step=idx)
 
+            len_t_dataloader = len(t_dataloader)
             if idx > 0 and (idx % (len_t_dataloader // 10) == 0 or idx == len_t_dataloader):
                 #=====================valid============================
                 if v_dataloader is not None:
                     valid_epoch_loss = []
                     with torch.no_grad():
                         model.eval()
-                        for vidx, (texts, inputs) in enumerate(tqdm(v_dataloader)):
+                        for vidx, (texts, inputs) in enumerate(tqdm(v_dataloader, desc="Validating: ", position=0, leave=True)):
                             inputs = inputs.to(model.local_rank if args.use_deepspeed else args.device)
                             texts = texts.to(model.local_rank if args.use_deepspeed else args.device)
 
