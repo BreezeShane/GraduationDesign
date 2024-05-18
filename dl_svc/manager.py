@@ -11,6 +11,7 @@ import warnings
 
 from CoCaProcedures.train import train as coca_train
 from TransferProcedures.train import train as submodel_train
+from TransferProcedures.infer_et_test import test as submodel_test, infer as submodel_infer
 from CoCaProcedures.compile_model import compile_model
 from config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH, OS_NAME
 
@@ -82,7 +83,7 @@ if __name__ == '__main__':
     parser.add_argument('mode', type=str,
         choices=[
             'train', 'compile_model', 'show_graphs', 'list_targets'
-            'train_submodel', 'infer_submodel', 'valid_submodel'
+            'train_submodel', 'infer_submodel', 'test_submodel'
         ],
         help="Toggle to the mode you want to run.")
     parser.add_argument('--device', '-d', help="The GPU id to use.")
@@ -170,8 +171,8 @@ if __name__ == '__main__':
         case 'train_submodel':
             submodel_train(args)
         case 'infer_submodel':
-            pass
-        case 'valid_submodel':
-            pass
+            submodel_infer(args)
+        case 'test_submodel':
+            submodel_test(args)
         case _:
             print("Ciallo～(∠・ω< )⌒☆")

@@ -48,7 +48,7 @@ def test(args):
         val_acc.append(v_acc)
         print(f"Test Acc = {v_acc:.3f}%, loss = {v_loss_avg}")
 
-def inference(args):
+def infer(args):
     """ Definition of inference procedure. """
     if args.siset is None:
         raise ValueError("Inference Dataset is needed!")
