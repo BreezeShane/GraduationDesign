@@ -65,6 +65,53 @@ class IP102Dataset(Dataset):
         return len(self.label_data)
 
 
+class ClassicalDataset(Dataset):
+    def __init__(self, dataset_path, data_label_pairs_file):
+        self.transforms = transforms.Compose([
+            transforms.Resize((image_size, image_size)),
+            transforms.RandomRotation((30,150)),
+            transforms.RandomHorizontalFlip(0.6),
+            transforms.RandomVerticalFlip(0.4),
+            transforms.ToTensor(),
+
+            transforms.Normalize(
+                mean=(0.5, 0.5, 0.5),
+                std=(0.5, 0.5, 0.5)
+            )
+        ])
+
+        if not os.path.isdir(dataset_path):
+            raise ValueError(f"Expected the path to dataset, but got {dataset_path}")
+        data_label_pairs_file_path = os.path.join(dataset_path, data_label_pairs_file)
+        images_path = os.path.join(dataset_path, "images")
+        try:
+            raw_lines = None
+            with open(data_label_pairs_file_path, encoding="utf-8") as f:
+                raw_lines = f.read().splitlines()
+            image_label_pairs = []
+            for raw_line in raw_lines:
+                temp = raw_line.split(' ')
+                image_label_pairs.append(
+                    (int(temp[1]), join(images_path, temp[0]))
+                )
+            self.image_label_pairs = image_label_pairs
+        except IOError as exc:
+            raise IOError(
+                    "Cannot load dataset! Please check the correct path "
+                    "and keep the file struct of dataset right."
+                ) from exc
+
+    def __getitem__(self, index):
+        label, image_path = self.image_label_pairs[index]
+        image = self.transforms(
+            Image.open(image_path).convert('RGB')
+        )
+        return label, image
+
+    def __len__(self):
+        return len(self.image_label_pairs)
+
+
 def load_dataset(dataset_folder_path, record_file, class_file, shuffle=True, batch_size=1) -> DataLoader:
     """ load IP102 dataset by text file. """
     vocabulary, converter = text_process(dataset_folder_path, class_file, vec_dim=510)
@@ -72,6 +119,10 @@ def load_dataset(dataset_folder_path, record_file, class_file, shuffle=True, bat
     _dataloader = DataLoader(dataset=ip102_dataset, batch_size=batch_size, shuffle=shuffle)
     return _dataloader
 
+def load_classic_dataset(data_folder_path, record_file, shuffle=True, batch_size=1):
+    _dataset = ClassicalDataset(data_folder_path, record_file)
+    _dataloader = DataLoader(dataset=_dataset, batch_size=batch_size, shuffle=shuffle)
+    return _dataloader
 
 def load_data(data_folder_path):
     """ Load images under the designated directory. """
