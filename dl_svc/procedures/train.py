@@ -9,6 +9,7 @@ import numpy as np
 import deepspeed
 from tqdm import tqdm
 from torchinfo import summary
+from torch.nn import CrossEntropyLoss
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
 from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
@@ -16,6 +17,7 @@ from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
 from dl_svc.DataProcess.datasetloader import load_dataset
 from dl_svc.COCA.coca_model import coca_vit_b_32, coca_vit_l_14
 from dl_svc.COCA.coca_vit_custom import coca_vit_custom
+from dl_svc.Loss.CoCa_loss import CoCaLoss
 from dl_svc.Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperature
 from dl_svc.Utils.early_stop import EarlyStopping
 from dl_svc.config import TRAIN_CFG, TENSORBOARD_DATA_PATH, CHECKPOINT_PATH
@@ -104,11 +106,8 @@ def train(args, carry_on=False):
             lr_scheduler.load_state_dict(checkpoint['schedule'])
         model.eval()
 
-    loss_criterion = ContrastiveLossWithTemperature(
-        logit_scale = math.log(1 / 0.07), # DEFAULT_LOGIT_SCALE
-        logit_scale_min = math.log(1.0),
-        logit_scale_max = math.log(100.0),
-    )
+    loss_criterion = CoCaLoss()
+
     if TRAIN_CFG.EARLY_STOP:
         early_stopping = EarlyStopping(
             TRAIN_CFG.PATIENCE,
@@ -128,13 +127,10 @@ def train(args, carry_on=False):
 
     train_epochs_loss = []
     valid_epochs_loss = []
-    train_acc = []
-    val_acc = []
 
     for epoch in range(TRAIN_CFG.EPOCHS):
         model.train()
         train_epoch_loss = []
-        acc, nums = 0., 0
 
         for idx, (texts, inputs) in enumerate(tqdm(t_dataloader)):
             inputs = inputs.to(model.local_rank if args.use_deepspeed else args.device)
@@ -143,13 +139,13 @@ def train(args, carry_on=False):
             if args.use_deepspeed:
                 outputs = model(inputs, texts)
                 # The above might be loss = model(inputs, texts) and then the next line should be removed.
-                loss = loss_criterion(outputs[0].squeeze(), outputs[1])
+                loss = loss_criterion(outputs=outputs, texts=texts)
                 model.backward(loss)
                 model.step()    # lr_scheduler.step() would also be executed by this.
             else:
                 optimizer.zero_grad()
                 outputs = model(inputs, texts)
-                loss = loss_criterion(outputs[0].squeeze(), outputs[1])
+                loss = loss_criterion(outputs=outputs, texts=texts)
                 loss.backward()
                 # torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0) # grad clip
                 optimizer.step()
@@ -157,11 +153,6 @@ def train(args, carry_on=False):
                 lr_scheduler.step()
 
             train_epoch_loss.append(loss.item())
-            predictions = embedding_cosine_similarity(outputs[0].squeeze(), outputs[1]).argmax(dim=1)
-            labels = texts[:, -1:].reshape(-1)
-            acc += sum(predictions == labels).cpu()
-            nums += labels.shape[0]
-
             len_t_dataloader = len(t_dataloader)
             print(f" Epoch: {epoch+1}/{TRAIN_CFG.EPOCHS}, loss={loss.item()}")
             # Print train loss and histogram of parameters' distribution
@@ -180,7 +171,6 @@ def train(args, carry_on=False):
                 #=====================valid============================
                 if v_dataloader is not None:
                     valid_epoch_loss = []
-                    acc, nums = 0., 0
                     with torch.no_grad():
                         model.eval()
                         for vidx, (texts, inputs) in enumerate(tqdm(v_dataloader)):
@@ -188,22 +178,16 @@ def train(args, carry_on=False):
                             texts = texts.to(model.local_rank if args.use_deepspeed else args.device)
 
                             outputs = model(inputs, texts)
-                            loss = loss_criterion(outputs[0].squeeze(), outputs[1])
+                            loss = loss_criterion(outputs=outputs, texts=texts)
 
                             valid_epoch_loss.append(loss.item())
-                            predictions = embedding_cosine_similarity(outputs[0].squeeze(), outputs[1]).argmax(dim=1)
-                            labels = texts[:, -1:].reshape(-1)
-                            acc += sum(predictions == labels).cpu()
-                            nums += labels.shape[0]
                             #TB Print valid loss
                             writer.add_scalar(f"V_Loss_BS_{idx}_Epoch_{epoch+1}", loss.item(), vidx)
                     v_loss_avg = np.average(valid_epoch_loss)
-                    v_acc = 100 * acc / nums
                     valid_epochs_loss.append(v_loss_avg)
-                    val_acc.append(v_acc)
-                    print("\n---------------------------------------------------------------------------------")
-                    print(f"| Epoch: {epoch+1} Iters: {idx} Valid Acc: {v_acc:.3f}%, Avg Loss: {v_loss_avg} |")
-                    print("---------------------------------------------------------------------------------\n")
+                    print("\n---------------------------------------------------------")
+                    print(f"| Epoch: {epoch+1} Iters: {idx}, Avg Loss: {v_loss_avg} |")
+                    print("---------------------------------------------------------\n")
                 #==================early stopping======================
                 if TRAIN_CFG.EARLY_STOP:
                     early_stopping(
@@ -256,12 +240,10 @@ def train(args, carry_on=False):
 
 
         t_loss_avg = np.average(train_epoch_loss)
-        t_acc = 100 * acc / nums
         train_epochs_loss.append(t_loss_avg)
-        train_acc.append(t_acc)
-        print("\n------------------------------------------------------------------------")
-        print(f"| Epoch {epoch+1} Latest Train Acc = {t_acc:.3f}%, Loss = {t_loss_avg} |")
-        print("------------------------------------------------------------------------\n")
+        print("\n----------------------------------------")
+        print(f"| Epoch {epoch+1}, Loss = {t_loss_avg} |")
+        print("----------------------------------------\n")
 
     # Print Loss with epochs when epochs more than 1
     if TRAIN_CFG.EPOCHS > 1:
