@@ -9,7 +9,8 @@ from tvm.target import Target
 import torch
 import warnings
 
-from CoCaProcedures.train import train
+from CoCaProcedures.train import train as coca_train
+from TransferProcedures.train import train as submodel_train
 from CoCaProcedures.compile_model import compile_model
 from config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH, OS_NAME
 
@@ -79,8 +80,12 @@ if __name__ == '__main__':
     parser = ArgumentParser()
 
     parser.add_argument('mode', type=str,
-        choices=['train', 'compile_model', 'show_graphs', 'list_targets'],
+        choices=[
+            'train', 'compile_model', 'show_graphs', 'list_targets'
+            'train_submodel', 'infer_submodel', 'valid_submodel'
+        ],
         help="Toggle to the mode you want to run.")
+    parser.add_argument('--device', '-d', help="The GPU id to use.")
 
 
     # mode train
@@ -96,8 +101,6 @@ if __name__ == '__main__':
     train_group_parser.add_argument('--network', dest='model_type', type=str, default='custom',
         choices=['base', 'large', 'custom'],
         help="Toggle the size mode of network.")
-    train_group_parser.add_argument('--device', '-d',
-        help="The GPU id to use.")
     train_group_parser.add_argument('--save_model_path', dest='mod_path',
         default='./models', type=str,
         help="The path for the trained model you save")
@@ -115,7 +118,7 @@ if __name__ == '__main__':
         help="The path to the model for compiling.")
     # see https://tvm.apache.org/docs/reference/api/python/target.html#module-tvm.target for detals.
     compile_group_parser.add_argument('--target', type=str, choices=Target.list_kinds(),
-        help="Select the compile target.")
+        help="Select the compile target. Run `python manager.py list_targets` for details.")
     compile_group_parser.add_argument('--save_package_path', dest='pkg_path', type=str,
         help="The path to save the compiled model.")
     compile_group_parser.add_argument('--tune_mode', dest='tune',
@@ -131,6 +134,19 @@ if __name__ == '__main__':
     compile_group_parser.add_argument('--set_timeout', dest='timeout', default=10, type=int,
         help="Set the timeout on each tuning step. Only needed on compiling large model.")
 
+    submodel_group_parser = parser.add_argument_group(title='Submodel Mode')
+    # -------------------------------------------------------------------- #
+    submodel_group_parser.add_argument('--stset', type=str, required=True,
+        help="The path to training dataset folder.")
+    submodel_group_parser.add_argument('--svset', type=str, required=True,
+        help="The path to validating dataset folder.")
+    submodel_group_parser.add_argument('--smodel', type=str, required=True,
+        help="The path to pretrained model.pt")
+    submodel_group_parser.add_argument('--smodel_type', type=str, default="normal",
+        choices=["normal", "lora", "deepspeed"],
+        help="The pretrained model type.")
+
+
     args = parser.parse_args()
 
     check_device(args)
@@ -138,10 +154,18 @@ if __name__ == '__main__':
 
     match args.mode:
         case 'train':
-            train(args, carry_on=args.carry_on)
+            coca_train(args, carry_on=args.carry_on)
         case 'compile_model':
             compile_model(args)
         case 'show_graphs':
             pass
         case 'list_targets':
             list_targets()
+        case 'train_submodel':
+            submodel_train(args)
+        case 'infer_submodel':
+            pass
+        case 'valid_submodel':
+            pass
+        case _:
+            print("Ciallo～(∠・ω< )⌒☆")
