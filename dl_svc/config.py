@@ -1,14 +1,12 @@
 """
     Global Config and Train Config.
 """
-import platform
 from yacs.config import CfgNode as CN
 
-# CHECKPOINT_PATH = 'checkpoint/'
-# TENSORBOARD_DATA_PATH = 'log/'
+# CHECKPOINT_PATH = './checkpoint/'
+# TENSORBOARD_DATA_PATH = './log/'
 CHECKPOINT_PATH = '/hy-tmp/checkpoint/'
 TENSORBOARD_DATA_PATH = '../tf_logs/'
-OS_NAME = platform.system().lower()
 IMG_TYPE_LIST = {'jpg','bmp','png','jpeg','rgb','tif'}
 
 TRAIN_CFG = CN()

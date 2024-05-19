@@ -2,7 +2,6 @@
 The procedure to process command arguments from user.
 """
 import os
-import ctypes
 from argparse import ArgumentParser
 from tvm.target import Target
 
@@ -13,27 +12,16 @@ from CoCaProcedures.train import train as coca_train
 from TransferProcedures.train import train as submodel_train
 from TransferProcedures.infer_et_test import test as submodel_test, infer as submodel_infer
 from CoCaProcedures.compile_model import compile_model
-from config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH, OS_NAME
+from config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH
 
 def init_dirs(arguments):
     """ Initialize the directories needed. """
     __create_dir(arguments.mod_path)
     __create_dir(CHECKPOINT_PATH)
-    __create_hidden_dir(TENSORBOARD_DATA_PATH)
+    __create_dir(TENSORBOARD_DATA_PATH)
 
 def __create_dir(dir_path):
     if not os.path.exists(dir_path):
-        os.mkdir(dir_path)
-
-def __create_hidden_dir(dir_path):
-    if OS_NAME == "linux":
-        paths = dir_path.split('/')
-        paths[-1] = "." + paths[-1]
-        dir_path = os.path.join(*paths)
-    if not os.path.exists(dir_path):
-        if OS_NAME =="windows":
-            _ret = ctypes.windll.kernel32.SetFileAttributesW(
-                dir_path, 0x02) # FILE_ATTRIBUTE_HIDDEN = 0x02
         os.mkdir(dir_path)
 
 def check_device(arguments):
@@ -74,8 +62,6 @@ def list_targets():
     print("/*===========================*/")
 
 if __name__ == '__main__':
-    if OS_NAME != "windows" and OS_NAME != "linux":
-        raise OSError("Not supported operation system!")
     warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
 
     parser = ArgumentParser()
