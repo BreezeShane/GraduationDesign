@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     parser.add_argument('mode', type=str,
         choices=[
-            'train', 'compile_model', 'show_graphs', 'list_targets'
+            'train', 'compile_model', 'show_graphs', 'list_targets',
             'train_submodel', 'infer_submodel', 'test_submodel',
             'ciallo'
         ],
@@ -141,7 +141,6 @@ if __name__ == '__main__':
         help="The path to folder containing images to infer.")
     submodel_group_parser.add_argument('--scls', dest='scls_path', type=str,
         help="The path to text file containing species' name in train dataset.")
-
 
     args = parser.parse_args()
 
