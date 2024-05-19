@@ -13,9 +13,10 @@ from ModelTransfer.Classifier import Classifier
 
 def test(args):
     """ Definition of validation procedure. """
-    if args.vset is None:
-        raise ValueError("Validate Dataset is needed!")
-    t_dataloader = load_classic_dataset(args.svset, "test.txt")
+    if None in (args.stest, args.smodel):
+        raise ValueError("All params '--smodel, --stest' are required!")
+
+    t_dataloader = load_classic_dataset(args.stest, "test.txt")
 
     model = Classifier(
         pretrained_model_path=args.smodel, device=args.device,
@@ -25,12 +26,10 @@ def test(args):
 
     valid_loss = []
     val_acc = []
+    acc, nums = 0., 0
 
     with torch.no_grad():
         model.eval()
-        valid_epoch_loss = []
-        acc, nums = 0., 0
-
         for _, (label, inputs) in enumerate(tqdm(t_dataloader)):
             inputs = inputs.to(torch.float32).to(args.device)
             label = label.to(torch.float32).to(args.device)
@@ -38,20 +37,21 @@ def test(args):
             predicts = outputs.squeeze(1).argmax(1)
             loss = loss_criterion(predicts, labels)
 
-            valid_epoch_loss.append(loss.item())
+            valid_loss.append(loss.item())
             acc += sum(predicts == label).cpu()
             nums += label.shape[0]
 
-        v_loss_avg = np.average(valid_epoch_loss)
-        v_acc = 100 * acc / nums
-        valid_loss.append(v_loss_avg)
-        val_acc.append(v_acc)
-        print(f"Test Acc = {v_acc:.3f}%, loss = {v_loss_avg}")
+        test_loss_avg = np.average(valid_loss)
+        test_acc = 100 * acc / nums
+        print("\n----------------------------------------------------------------")
+        print(f"| Test Acc = {test_acc:.3f}%, Test Avg loss = {test_loss_avg} |")
+        print("----------------------------------------------------------------\n")
 
 def infer(args):
     """ Definition of inference procedure. """
-    if args.siset is None:
-        raise ValueError("Inference Dataset is needed!")
+    if None in (args.smodel, args.siset, args.scls_path):
+        raise ValueError("All params '--smodel, --siset, --scls' are required!")
+
     i_data_list = load_data(args.siset)
     model = Classifier(
         pretrained_model_path=args.smodel, device=args.device,

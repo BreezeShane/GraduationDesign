@@ -8,12 +8,13 @@ TUNING_RECORDS_PATH = ".records.log"
 
 def compile_model(args):
     """ Compile the trained model by TVMC while using tune, etc. """
-    if args.target is not None:
-        raise ValueError("The parameter '--compile_mode' is needed!")
+    if None in (args.target, args.mod2cmp, args.pkg_path):
+        raise ValueError("All params '--model_path, --target, --save_package_path' are required!")
+
     if not os.path.isfile(args.mod2cmp):
         raise ValueError(f"The path to model is needed, but got {args.mod2cmp} which is not file!")
     model = tvmc.load(args.mod2cmp, shape_dict={
-        'input1' : [1, 2, 3, 4], 
+        'input1' : [1, 2, 3, 4],
         'input2' : [1, 2, 3, 4]
     }) # the shape_dict comes from 'input/shape_dict' loaded by netron
     model.summary()

@@ -30,6 +30,9 @@ def embedding_cosine_similarity(matrix_1, matrix_2):
 
 def train(args, carry_on=False):
     """ Train CoCa Vit Model. """
+    if None in (args.tset, args.text, args.cls, args.vset):
+        raise ValueError("All params '--tset, --text, --cls, --vset' are required!")
+
     setup_seed(TRAIN_CFG.SEED)
 
     t_dataloader = load_dataset(args.tset, "train.txt", args.cls_path, batch_size=TRAIN_CFG.BATCH_SIZE)

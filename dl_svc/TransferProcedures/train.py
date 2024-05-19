@@ -12,6 +12,9 @@ from config import TRANSFER_TRAIN_CFG, CHECKPOINT_PATH, TENSORBOARD_DATA_PATH
 from Utils.random_seed import setup_seed
 
 def train(args):
+    if None in (args.stset, args.svset, args.smodel):
+        raise ValueError("All params '--smodel, --stset, --svset' are required!")
+
     setup_seed(TRANSFER_TRAIN_CFG.SEED)
 
     t_dataloader = load_classic_dataset(args.stset, "train.txt", batch_size=TRANSFER_TRAIN_CFG.BATCH_SIZE)

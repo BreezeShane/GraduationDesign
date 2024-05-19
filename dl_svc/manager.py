@@ -83,7 +83,8 @@ if __name__ == '__main__':
     parser.add_argument('mode', type=str,
         choices=[
             'train', 'compile_model', 'show_graphs', 'list_targets'
-            'train_submodel', 'infer_submodel', 'test_submodel'
+            'train_submodel', 'infer_submodel', 'test_submodel',
+            'ciallo'
         ],
         help="Toggle to the mode you want to run.")
     parser.add_argument('--device', '-d', help="The GPU id to use.")
@@ -92,13 +93,13 @@ if __name__ == '__main__':
     # mode train
     train_group_parser = parser.add_argument_group(title='Train Mode')
     # -------------------------------------------------------------------- #
-    train_group_parser.add_argument('--tset', type=str, required=True,
+    train_group_parser.add_argument('--tset', type=str,
         help="The path to train dataset folder for loading.")
-    train_group_parser.add_argument('--text', type=str, required=True,
+    train_group_parser.add_argument('--text', type=str,
         help="The path to folder containing species dictionary for train dataset.")
-    train_group_parser.add_argument('--cls', dest='cls_path', type=str, required=True,
+    train_group_parser.add_argument('--cls', dest='cls_path', type=str,
         help="The path to text file containing species' name in train dataset.")
-    train_group_parser.add_argument('--vset', type=str, required=True,
+    train_group_parser.add_argument('--vset', type=str,
         help=
         "The path to validate dataset folder for loading. And enable to validate while training.")
     train_group_parser.add_argument('--network', dest='model_type', type=str, default='custom',
@@ -139,17 +140,19 @@ if __name__ == '__main__':
 
     submodel_group_parser = parser.add_argument_group(title='Submodel Mode')
     # -------------------------------------------------------------------- #
-    submodel_group_parser.add_argument('--stset', type=str, required=True,
-        help="The path to training dataset folder.")
-    submodel_group_parser.add_argument('--svset', type=str, required=True,
-        help="The path to validating dataset folder.")
-    submodel_group_parser.add_argument('--smodel', type=str, required=True,
+    submodel_group_parser.add_argument('--smodel', type=str,
         help="The path to pretrained model.pt")
+    submodel_group_parser.add_argument('--stset', type=str,
+        help="The path to training dataset folder.")
+    submodel_group_parser.add_argument('--svset', type=str,
+        help="The path to validating dataset folder.")
     submodel_group_parser.add_argument('--smodel_type', type=str, default="normal",
         choices=["normal", "lora", "deepspeed"],
         help="The pretrained model type.")
+    submodel_group_parser.add_argument('--stest', type=str,
+        help="The path to test dataset folder.")
     submodel_group_parser.add_argument('--siset', type=str,
-        help="The path to validating dataset folder.")
+        help="The path to folder containing images to infer.")
     submodel_group_parser.add_argument('--scls', dest='scls_path', type=str,
         help="The path to text file containing species' name in train dataset.")
 

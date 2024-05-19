@@ -114,7 +114,7 @@ class ClassicalDataset(Dataset):
 
 def load_dataset(dataset_folder_path, record_file, class_file_path, shuffle=True, batch_size=1) -> DataLoader:
     """ load IP102 dataset by text file. """
-    vocabulary, converter = text_process(dataset_folder_path, class_file_path, vec_dim=510)
+    vocabulary, converter = text_process(class_file_path, vec_dim=510)
     ip102_dataset = IP102Dataset(dataset_folder_path, record_file, converter, image_size=512)
     _dataloader = DataLoader(dataset=ip102_dataset, batch_size=batch_size, shuffle=shuffle)
     return _dataloader
