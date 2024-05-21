@@ -7,7 +7,7 @@ pub mod doc_database;
 pub mod model_manager;
 pub mod authenticator;
 pub mod dl_svc;
-pub mod custom_hash_map;
+pub mod species_vector;
 
 use std::{fs::copy, io, path::PathBuf, str::FromStr, sync::{Arc, Mutex}};
 use authenticator::{handler_sign_in, handler_sign_up, middleware_authorize, handler_transfer_permission_to_role};

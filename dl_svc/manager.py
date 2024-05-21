@@ -11,14 +11,16 @@ import warnings
 from CoCaProcedures.train import train as coca_train
 from TransferProcedures.train import train as submodel_train
 from TransferProcedures.infer_et_test import test as submodel_test, infer as submodel_infer
-from CoCaProcedures.compile_model import compile_model
-from config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH
+from TransferProcedures.compile_model import compile_model, test_module
+from TransferProcedures.compile_utils import transfer_classifier_model
+from config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH, COMPILED_MODEL_DIR
 
 def init_dirs(arguments):
     """ Initialize the directories needed. """
     __create_dir(arguments.mod_path)
     __create_dir(CHECKPOINT_PATH)
     __create_dir(TENSORBOARD_DATA_PATH)
+    __create_dir(COMPILED_MODEL_DIR)
 
 def __create_dir(dir_path):
     if not os.path.exists(dir_path):
@@ -68,8 +70,10 @@ if __name__ == '__main__':
 
     parser.add_argument('mode', type=str,
         choices=[
-            'train', 'compile_model', 'show_graphs', 'list_targets',
+            'train', 'compile_model', 'test_modules',
+            'show_graphs', 'list_targets',
             'train_submodel', 'infer_submodel', 'test_submodel',
+            'transfer_classifier_model',
             'ciallo'
         ],
         help="Toggle to the mode you want to run.")
@@ -109,8 +113,10 @@ if __name__ == '__main__':
     # see https://tvm.apache.org/docs/reference/api/python/target.html#module-tvm.target for detals.
     compile_group_parser.add_argument('--target', type=str, choices=Target.list_kinds(),
         help="Select the compile target. Run `python manager.py list_targets` for details.")
-    compile_group_parser.add_argument('--save_package_path', dest='pkg_path', type=str,
+    compile_group_parser.add_argument('--save_path', type=str,
         help="The path to save the compiled model.")
+    compile_group_parser.add_argument('--ts', type=str,
+        help="Set True if pretrained model is TorchScript model.")
     compile_group_parser.add_argument('--tune_mode', dest='tune',
         action='store_true', default=False,
         help="Enable to tune the model while compiling.")
@@ -152,6 +158,8 @@ if __name__ == '__main__':
             coca_train(args, carry_on=args.carry_on)
         case 'compile_model':
             compile_model(args)
+        case 'test_modules':
+            test_module(args)
         case 'show_graphs':
             pass
         case 'list_targets':
@@ -162,5 +170,7 @@ if __name__ == '__main__':
             submodel_infer(args)
         case 'test_submodel':
             submodel_test(args)
-        case _:
+        case 'transfer_classifier_model':
+            transfer_classifier_model(args)
+        case 'ciallo':
             print("Ciallo～(∠・ω< )⌒☆")

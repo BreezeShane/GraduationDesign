@@ -52,6 +52,7 @@ fn main() -> Result<(), Error> {
     const TFEEDBACK_STORED_DIRECTORY: &str = "./tfeedback/";
     const UFEEDBACK_STORED_DIRECTORY: &str = "./ufeedback/";
     const DATA_TO_TRAIN_DIRECTORY: &str = "./data2train/";
+    const COMPILED_MODEL_STORED_PATH: &str = "./models/compiled/";
     let vec_path = vec![
         USER_PIC_PATH,
         DATASETS_DIRECTORY,
@@ -59,7 +60,8 @@ fn main() -> Result<(), Error> {
         MODEL_BACKUP_STORED_PATH,
         TFEEDBACK_STORED_DIRECTORY,
         UFEEDBACK_STORED_DIRECTORY,
-        DATA_TO_TRAIN_DIRECTORY
+        DATA_TO_TRAIN_DIRECTORY,
+        COMPILED_MODEL_STORED_PATH,
     ];
     init_dirs(vec_path);
 

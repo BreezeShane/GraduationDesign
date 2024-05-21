@@ -35,7 +35,7 @@ def test(args):
             label = label.to(torch.float32).to(args.device)
             outputs = model(inputs)
             predicts = outputs.squeeze(1).argmax(1)
-            loss = loss_criterion(predicts, labels)
+            loss = loss_criterion(predicts, label)
 
             valid_loss.append(loss.item())
             acc += sum(predicts == label).cpu()

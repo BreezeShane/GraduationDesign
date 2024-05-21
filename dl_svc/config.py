@@ -7,6 +7,8 @@ from yacs.config import CfgNode as CN
 # TENSORBOARD_DATA_PATH = './log/'
 CHECKPOINT_PATH = '/hy-tmp/checkpoint/'
 TENSORBOARD_DATA_PATH = '../tf_logs/'
+COMPILED_MODEL_DIR = "./models/compiled/"
+MODEL_TUNING_JSON = "./models/compiled/Classifier-Autotuning.json"
 IMG_TYPE_LIST = {'jpg','bmp','png','jpeg','rgb','tif'}
 
 TRAIN_CFG = CN()
