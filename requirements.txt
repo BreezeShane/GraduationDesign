@@ -7,6 +7,12 @@ torch==2.2.1
 torchvision==0.17.1
 tqdm==4.66.2
 deepspeed==0.14.0
-apache-tvm==0.14.dev273
 yacs==0.1.8
 torchinfo==1.8.0
+# TVM 0.17.dev0 Dependencies
+decorator
+attrs
+tornado
+psutil
+xgboost>=1.1.0
+cloudpickle
