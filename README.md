@@ -7,11 +7,13 @@
 ├── Cargo.lock
 ├── Cargo.toml
 ├── dl_svc
-│   ├── COCA
+│   ├── CoCa
 │   │   ├── coca_model.py
 │   │   ├── coca_vit_custom.py
 │   │   ├── multimodal_decoder.py
 │   │   └── text_decoder.py
+│   ├── CoCaProcedures
+│   │   └── train.py
 │   ├── config.py
 │   ├── DataProcess
 │   │   ├── datasetloader.py
@@ -28,20 +30,26 @@
 │   │   ├── patch_embedding.py
 │   │   └── transformer.py
 │   ├── Loss
+│   │   ├── CoCa_loss.py
 │   │   └── contrastive_loss_with_temperature.py
+│   ├── manager.py
 │   ├── Masking
 │   │   └── random_masking.py
-│   ├── procedures
+│   ├── ModelTransfer
+│   │   └── Classifier.py
+│   ├── TransferProcedures
 │   │   ├── compile_model.py
+│   │   ├── compile_utils.py
+│   │   ├── infer_by_tvm.py
 │   │   ├── infer_et_test.py
-│   │   ├── prune_model.py
 │   │   └── train.py
 │   └── Utils
 │       ├── attention.py
 │       ├── common.py
 │       ├── distributed.py
 │       ├── early_stop.py
-│       └── file_io.py
+│       ├── file_io.py
+│       └── random_seed.py
 ├── front_end
 │   ├── app
 │   │   ├── Componets
@@ -53,7 +61,6 @@
 │   │   │   ├── NavBar.tsx
 │   │   │   ├── ResultPagePanel.tsx
 │   │   │   └── UploadImage.tsx
-│   │   ├── favicon.ico
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   ├── page.module.css
@@ -79,10 +86,8 @@
 │   ├── public
 │   │   ├── next.svg
 │   │   └── vercel.svg
-│   ├── README.md
 │   └── tsconfig.json
 ├── GraduationDesign.ipynb
-├── manager.py
 ├── README.md
 ├── requirements.txt
 ├── src
@@ -97,9 +102,7 @@
 │   ├── io_agent.rs
 │   ├── main.rs
 │   ├── model_manager.rs
-│   ├── ssh_socket
-│   │   ├── client.rs
-│   │   └── server.rs
+│   ├── species_vector.rs
 │   └── user_manager.rs
 ├── SSH-Wifty
 │   ├── cert
@@ -110,9 +113,12 @@
 │   │   ├── sshwifty.conf.json
 │   │   └── sshwifty.conf.json.example
 │   └── SSHwifty.yml
+├── Test Plan.jmx
+├── tvm_make_config
+│   └── config.cmake
 └── UpgradePip.py
 
-23 directories, 85 files</code>
+25 directories, 89 files</code>
 </pre>
 </details>
 
@@ -174,17 +180,39 @@ The expected run result should be like here:
 
 <center><strong>⚠️ To use SSH Wifty, you should ensure that the "sshd" daemon is running on the server. <br />📄 Use <code>systemctl start sshd</code> to start sshd service.</strong></center>
 
-### CUDA == v11.7 (Not ensured to support newer version) **[On dev]**
-
-In general, the deep learning would support higher version, as long as DeepSpeed supports PyTorch and PyTorch supports the relative CUDA.
-
-To install PyTorch v1.13.1+cu117, use the command **(Of course torchaudio is optional)**:
-```shell
-pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
-```
-
 The command comes from `pytorch.org`, for more details, see: [INSTALLING PREVIOUS VERSIONS OF PYTORCH - pytorch.org](https://pytorch.org/get-started/previous-versions/)
 
+### TVM
+
+⚠️**Caution**: Don't use the commands in [Building with a Conda Environment](https://tvm.apache.org/docs/install/from_source.html#building-with-a-conda-environment). Because there is latent bug in the shell script that conda would execute, and it only gave me Error Exit Code 2 without any trace info.
+
+Because the latest version that PyPI could access is 0.14.dev273, and it didn't implemented `aten::scaled_dot_product_attention` which the model required.
+
+Since the version 0.15.0 was released, [#16143](https://github.com/apache/tvm/pull/16143) - [Pytorch] Add support for `aten::scaled_dot_product_attention`.
+
+Of course, after searching so much for the resolution, the only way is that fetch source code and then compile shared library. At last install Python package linked to the libs.
+
+For the project, first fetch the source code:
+```shell
+git clone --recursive https://github.com/apache/tvm tvm
+```
+
+For the system I'm using, C/C++ compile toolkit, Cmake, Ninja, etc. are prepared before. Then mkdir `tvm/build` and got in.
+
+You could run `cp tvm_make_config/config.cmake tvm/build/` for convenience.
+
+After that, run `export TVM_LOG_DEBUG="ir/transform.cc=1,relay/ir/transform.cc=1"` to prepare env for compilation.
+
+Now you can run following commands to compile the shared library. For linux, you would get two libs: `libtvm.so` and `libtvm_runtime.so`.
+```shell
+cd tvm/build
+cmake .. -G Ninja
+ninja
+```
+
+The last step, install Python package. If you're runing conda env, you should activate the destination env first. Then run `python tvm/python/setup.py install`.
+
+You have finished the compilation now, congratulations!
 
 ## Deep Learning
 
@@ -386,9 +414,9 @@ The project searched for the translation and relative wiki of those classes main
 
 ### Data Process
 
-#### Generate Dataset for COCA
+#### Generate Dataset for CoCa
 
-Because COCA need two input(Images and Text), so it's necessary to generate a new dataset from `Using Datasets` above. The run result is below:
+Because CoCa need two input(Images and Text), so it's necessary to generate a new dataset from `Using Datasets` above. The run result is below:
 
 ```shell
 ❯ python dl_svc/DataProcess/generate_dataset.py
@@ -400,17 +428,17 @@ Because COCA need two input(Images and Text), so it's necessary to generate a ne
 
 ### Models' Source [[Reference]](https://github.com/facebookresearch/multimodal)
 
-The deep learning model named COCA, which comes from [TorchMultimodal](https://github.com/facebookresearch/multimodal), is the large model in this project here using for insect image classification. Thanks for their excellent works!
+The deep learning model named CoCa, which comes from [TorchMultimodal](https://github.com/facebookresearch/multimodal), is the large model in this project here using for insect image classification. Thanks for their excellent works!
 
-However I extract COCA only and edited source code in order to fit the project in plan of applying `deepspeed`, `Lora Adaptation`, `TVM`, etc.
+However I extract CoCa only and edited source code in order to fit the project in plan of applying `deepspeed`, `Lora Adaptation`, `TVM`, etc.
 
-### Project aiding in comprehension of COCA [[Reference]](https://github.com/lucidrains/CoCa-pytorch)
+### Project aiding in comprehension of CoCa [[Reference]](https://github.com/lucidrains/CoCa-pytorch)
 
-The project is not used here. But I use it for learn about COCA. So I would like to greatly appreciate their precious work!
+The project is not used here. But I use it for learn about CoCa. So I would like to greatly appreciate their precious work!
 
 ### Early Stop Source [[Reference]](https://github.com/Bjarten/early-stopping-pytorch)
 
-The project use Early Stop Regularization method to train COCA, for lack of data. The Early Stop class comes from `pytorchtools.py` of [here](https://github.com/Bjarten/early-stopping-pytorch).
+The project use Early Stop Regularization method to train CoCa, for lack of data. The Early Stop class comes from `pytorchtools.py` of [here](https://github.com/Bjarten/early-stopping-pytorch).
 
 ### Initial params' value [[Reference]](https://arxiv.org/abs/2001.08361)
 
