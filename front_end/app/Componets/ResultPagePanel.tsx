@@ -1,27 +1,32 @@
 import { Button, Pagination, PaginationProps, Typography } from "antd";
 import axios from "axios";
 import { useState, memo, useEffect } from "react";
-
+import { ResultUnit } from "../Pages/SubPages/Common";
 const { Title, Paragraph, Text, Link } = Typography;
 
-const ResultPagePanel: React.FC<{ result_table: Object }> = memo((props) => {
+
+
+const ResultPagePanel: React.FC<{ result_table: ResultUnit[] }> = memo((props) => {
     const { result_table } = props;
-    const [results, setResults] = useState({});
+    const [results, setResults] = useState<ResultUnit[]>([]);
     const [total, setTotal] = useState(0);
     const [current, setCurrent] = useState(0);
     const [title, setTitle] = useState("");
     const [link_content, setLinkContent] = useState("");
     const [link, setLink] = useState<string | undefined>();
+    const [content, setContent] = useState<string | undefined>();
 
-    const updatePanelbyIndex = (page_num: number, raw_table: Object) => {
+    const updatePanelbyIndex = (page_num: number, raw_table: ResultUnit[]) => {
         let idx = page_num - 1;
-        let table = Object.entries(raw_table);
+        let table = raw_table;
         if (table.length > 0){
-            let related_image_name = (table[idx][1])[0]
-            let specie_name = (table[idx][1])[1];
+            let related_image_name = table[idx].file_name;
+            let specie_name = table[idx].specie_name;
+            let specie_content = table[idx].content;
             setLink(`http://baidu.com/s?wd=${specie_name}&q6=baike.baidu.com`);
             setLinkContent(`${specie_name}`);
             setTitle(`${specie_name} - ${related_image_name}`);
+            setContent(specie_content);
         }
     };
 
@@ -45,7 +50,7 @@ const ResultPagePanel: React.FC<{ result_table: Object }> = memo((props) => {
                 { link && <Paragraph>
                     Click <a href={link}>{link_content}</a> For More Detalis.
                 </Paragraph>}
-                
+                { content && <Paragraph>{content}</Paragraph>}
             </div>
             <br />
             <Pagination

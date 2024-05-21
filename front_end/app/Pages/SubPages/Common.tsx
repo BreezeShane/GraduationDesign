@@ -12,12 +12,18 @@ interface FileUnit {
     label: string | null,
 }
 
+export interface ResultUnit {
+    file_name: string,
+    specie_name: string,
+    content: string
+}
+
 const Common: React.FC<{ messageClient: NotificationInstance }> = (props) => {
     const { messageClient } = props;
     const [open, setOpen] = useState(false);
     const [labelList, setLabelList] = useState("");
     const [fileList, setFileList] = useState<UploadFile[]>([]);
-    const [result_table, setResultTable] = useState({});
+    const [result_table, setResultTable] = useState<ResultUnit[]>([]);
 
     const handleOpenModal = () => {
         setOpen(true);
@@ -101,6 +107,7 @@ const Common: React.FC<{ messageClient: NotificationInstance }> = (props) => {
                 placement: 'topLeft',
                 duration: 2,
             });
+            console.log(res.data)
             setResultTable(res.data);
         }).catch((err) => {
             messageClient.error({

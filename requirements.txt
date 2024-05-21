@@ -16,3 +16,4 @@ tornado
 psutil
 xgboost>=1.1.0
 cloudpickle
+mpi4py

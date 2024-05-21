@@ -7,7 +7,7 @@ use std::process::Command;
 
 use crate::{
     authenticator::{check_permission, Permission},
-    config::{DL_SVC_HOST, USER_PIC_PATH},
+    config::DL_SVC_HOST,
     io_agent::_obtain_dir,
     species_vector::SPECIES_VECTOR,
     MultiState
@@ -44,15 +44,15 @@ pub async fn handler_infer(
 
     let mut result_res: ResponseInferResult = Vec::new();
 
-    let infer_path_root = PathBuf::from(USER_PIC_PATH);
-    let infer_path = infer_path_root.join(_obtain_dir(&user_inference.useremail).unwrap());
+    let infer_path = PathBuf::from(_obtain_dir(&user_inference.useremail).unwrap());
     for file_name in files_vec {
         let image_path = infer_path.join(&file_name);
         let cmd_output = Command::new("python")
-        .arg("../dl_svc/TransferProcedures/infer_by_tvm.py")
+        .arg("./dl_svc/TransferProcedures/infer_by_tvm.py")
         .arg("optimized").arg("llvm")
         .arg(image_path.as_os_str().to_str().unwrap())
         .output().expect("failed to execute process");
+        tracing::warn!("Command result: {:#?}", cmd_output);
         let label = String::from_utf8_lossy(&cmd_output.stdout).to_string().parse::<usize>().unwrap();
         let (_, (specie_name, content)) = SPECIES_VECTOR[label];
         result_res.push(ResponseInferResultUnit {

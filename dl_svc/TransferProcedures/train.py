@@ -31,7 +31,7 @@ def train(args):
         optimizer=optimizer,
         T_0=len(t_dataloader),
         T_mult=1,
-        eta_min=1e-6
+        # eta_min=1e-6
     )
 
     writer = SummaryWriter(TENSORBOARD_DATA_PATH)
@@ -63,7 +63,7 @@ def train(args):
 
             optimizer.zero_grad()
             outputs = model(inputs)
-            predicts = outputs.argmax(1)
+            predicts = outputs.argmax(2).squeeze(1)
             loss = loss_criterion(predicts.float(), labels.float())
             loss.requires_grad_(True)
             loss.backward()
@@ -100,7 +100,7 @@ def train(args):
                 labels = labels.to(args.device)
 
                 outputs = model(inputs)
-                predicts = outputs.argmax(1)
+                predicts = outputs.argmax(2).squeeze(1)
                 loss = loss_criterion(predicts.float(), labels.float())
 
                 valid_epoch_loss.append(loss.item())

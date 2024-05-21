@@ -22,7 +22,7 @@ from config import TRAIN_CFG, TENSORBOARD_DATA_PATH, CHECKPOINT_PATH
 
 def train(args, carry_on=False):
     """ Train CoCa Vit Model. """
-    if None in (args.tset, args.text, args.cls, args.vset):
+    if None in (args.tset, args.text, args.cls_path, args.vset):
         raise ValueError("All params '--tset, --text, --cls, --vset' are required!")
 
     setup_seed(TRAIN_CFG.SEED)

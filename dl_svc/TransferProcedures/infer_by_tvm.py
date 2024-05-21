@@ -5,7 +5,7 @@ import numpy as np
 from torchvision import transforms
 from tvm.contrib import graph_executor
 
-from config import COMPILED_MODEL_DIR
+COMPILED_MODEL_DIR = "./models/compiled/"
 
 def transform_compose(image_size: int):
     """ Define Image Transform Compose """
@@ -27,11 +27,11 @@ def init_graph_executor(prefix_name, target):
     module = graph_executor.GraphModule(loaded_lib["default"](dev))
     return module
 
-def run_infer(image_path, module):
+def run_infer(img_path, module):
     """ Accept module given by Rust and run infer. """
     output_shape = (1, 1, 102)
     compose = transform_compose(image_size=512)
-    img = Image.open(image_path).convert("RGB")
+    img = Image.open(img_path).convert("RGB")
     input_data = compose(img).unsqueeze(0)
     module.set_input("input_img", input_data)
     module.run()
@@ -46,6 +46,6 @@ if __name__ == "__main__":
     prefix_name = sys.argv[1]
     target = sys.argv[2]
     image_path = sys.argv[3]
-    module = init_graph_executor(prefix_name=prefix_name, target=target)
-    result = run_infer(image_path=image_path, module=module)
-    print(result)
+    mod = init_graph_executor(prefix_name=prefix_name, target=target)
+    result = run_infer(img_path=image_path, module=mod)
+    print(result, end='')
