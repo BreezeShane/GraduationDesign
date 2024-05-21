@@ -7,7 +7,7 @@ use std::process::Command;
 
 use crate::{
     authenticator::{check_permission, Permission},
-    config::{COMPILED_MODEL_STORED_PATH, DL_SVC_HOST, USER_PIC_PATH},
+    config::{DL_SVC_HOST, USER_PIC_PATH},
     io_agent::_obtain_dir,
     species_vector::SPECIES_VECTOR,
     MultiState
