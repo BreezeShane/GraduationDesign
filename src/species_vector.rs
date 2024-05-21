@@ -1,8 +1,4 @@
-use std::collections::HashMap;
-use once_cell::sync::Lazy;
-
-pub static SPECIES_HASHMAP: Lazy<HashMap<&'static str, (&'static str, &'static str)>> = Lazy::new(|| {
-    let map = [
+pub static SPECIES_VECTOR: [(&str, (&str, &str)); 102] = [
         (
             "rice leaf roller",
             (
@@ -717,6 +713,4 @@ pub static SPECIES_HASHMAP: Lazy<HashMap<&'static str, (&'static str, &'static s
                 "叶蝉科（学名：Cicadellidae，又称浮尘子；leafhoppers）是一种属于半翅目叶蝉总科之下的、一类害禾谷类、蔬菜、果树和林木等的小型昆虫。静止时两翅成屋脊状，受侵扰时会弹跳飞离。目前共分为近四十个亚科；约有两万多个物种分布于全世界各大洲。叶蝉作为半翅目最大的一个类群具有重要的经济意义。"
             )
         ),
-    ].into_iter().collect();
-    map
-});
+];
