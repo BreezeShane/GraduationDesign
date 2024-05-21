@@ -1,17 +1,15 @@
 """
     Training CoCa Vit Definition.
 """
-import random
 from os.path import join
 import torch
 import numpy as np
 import deepspeed
 from tqdm import tqdm
 from torchinfo import summary
-from torch.nn import CrossEntropyLoss
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
-from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
+from peft import get_peft_model, LoraConfig, TaskType
 
 from DataProcess.datasetloader import load_dataset
 from CoCa.coca_model import coca_vit_b_32, coca_vit_l_14
@@ -21,12 +19,6 @@ from Loss.contrastive_loss_with_temperature import ContrastiveLossWithTemperatur
 from Utils.early_stop import EarlyStopping
 from Utils.random_seed import setup_seed
 from config import TRAIN_CFG, TENSORBOARD_DATA_PATH, CHECKPOINT_PATH
-
-def embedding_cosine_similarity(matrix_1, matrix_2):
-    x = matrix_1.mul(matrix_2)
-    x = (x - x.min()) / (x.max() - x.min())
-    x = (x - 0.5) * 2
-    return x
 
 def train(args, carry_on=False):
     """ Train CoCa Vit Model. """
@@ -167,11 +159,11 @@ def train(args, carry_on=False):
 
             for name, param in model.named_parameters():
                 if param.grad is not None:
-                  writer.add_histogram(tag=name+'.grad', values=param.grad, global_step=idx)
+                    writer.add_histogram(tag=name+'.grad', values=param.grad, global_step=idx)
                 writer.add_histogram(tag=name+'.data', values=param.data, global_step=idx)
 
             len_t_dataloader = len(t_dataloader)
-            if idx > 0 and (idx % (len_t_dataloader // 10) == 0 or idx == len_t_dataloader):
+            if idx > 0 and idx % (len_t_dataloader // 10) == 0:
                 #=====================valid============================
                 if v_dataloader is not None:
                     valid_epoch_loss = []
@@ -243,6 +235,12 @@ def train(args, carry_on=False):
                     )
 
 
+        torch.save({
+                'name': model_name,
+                'model': model.state_dict()
+            },
+            join(args.mod_path, 'the-last-model.pt')
+        )
         t_loss_avg = np.average(train_epoch_loss)
         train_epochs_loss.append(t_loss_avg)
         print("\n----------------------------------------")

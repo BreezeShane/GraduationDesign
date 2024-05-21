@@ -66,7 +66,7 @@ class IP102Dataset(Dataset):
 
 
 class ClassicalDataset(Dataset):
-    def __init__(self, dataset_path, data_label_pairs_file):
+    def __init__(self, dataset_path, data_label_pairs_file, image_size=512):
         self.transforms = transforms.Compose([
             transforms.Resize((image_size, image_size)),
             transforms.RandomRotation((30,150)),
@@ -120,7 +120,7 @@ def load_dataset(dataset_folder_path, record_file, class_file_path, shuffle=True
     return _dataloader
 
 def load_classic_dataset(data_folder_path, record_file, shuffle=True, batch_size=1):
-    _dataset = ClassicalDataset(data_folder_path, record_file)
+    _dataset = ClassicalDataset(data_folder_path, record_file, image_size=512)
     _dataloader = DataLoader(dataset=_dataset, batch_size=batch_size, shuffle=shuffle)
     return _dataloader
 
