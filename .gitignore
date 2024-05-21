@@ -10,6 +10,8 @@ models/
 ufeedback/
 tfeedback/
 data2train/
+log/
+tvm/
 
 # SSL Certificates
 cert.pem
