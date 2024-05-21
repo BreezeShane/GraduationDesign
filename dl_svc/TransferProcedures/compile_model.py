@@ -120,7 +120,7 @@ def tune_model(mod, target, params, tuner="xgb"):
 
     tuning_option = {
         "tuner": "xgb",
-        "trials": 10,
+        "trials": 10, # For CPU we(Apache) recommend 1500, for GPU 3000-4000.
         "early_stopping": 100,
         "measure_option": autotvm.measure_option(
             builder=autotvm.LocalBuilder(build_func="default"), runner=runner
