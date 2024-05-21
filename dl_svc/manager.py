@@ -78,6 +78,7 @@ if __name__ == '__main__':
         ],
         help="Toggle to the mode you want to run.")
     parser.add_argument('--device', '-d', help="The GPU id to use.")
+    parser.add_argument('--log', dest='log_dir', help='Run tensorboard to show graphs.')
 
 
     # mode train
@@ -161,7 +162,10 @@ if __name__ == '__main__':
         case 'test_modules':
             test_module(args)
         case 'show_graphs':
-            pass
+            if args.log_dir is None:
+                raise ValueError("The param '--log' is required!")
+            os.environ['CRYPTOGRAPHY_OPENSSL_NO_LEGACY'] = '1'
+            os.system(f"tensorboard --logdir {args.log_dir}")
         case 'list_targets':
             list_targets()
         case 'train_submodel':
