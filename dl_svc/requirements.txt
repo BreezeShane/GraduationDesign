@@ -16,4 +16,7 @@ tornado
 psutil
 xgboost>=1.1.0
 cloudpickle
+# Peft-LoRA
+
+# DeepSpeed
 mpi4py
