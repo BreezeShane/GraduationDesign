@@ -30,16 +30,15 @@ def train(args, carry_on=False):
     t_dataloader = load_dataset(args.tset, "train.txt", args.cls_path, batch_size=TRAIN_CFG.BATCH_SIZE)
     v_dataloader = load_dataset(args.vset, "val.txt", args.cls_path, shuffle=False)
 
-    match args.model_type:
-        case 'large':
-            model = coca_vit_l_14()
-            model_name = 'coca_vit_l_14'
-        case 'base':
-            model = coca_vit_b_32()
-            model_name = 'coca_vit_b_32'
-        case 'custom':
-            model = coca_vit_custom()
-            model_name = 'coca_vit_custom'
+    if args.model_type == 'large':
+        model = coca_vit_l_14()
+        model_name = 'coca_vit_l_14'
+    elif args.model_type == 'base':
+        model = coca_vit_b_32()
+        model_name = 'coca_vit_b_32'
+    elif args.model_type == 'custom':
+        model = coca_vit_custom()
+        model_name = 'coca_vit_custom'
 
     if args.use_lora:
         peft_config = LoraConfig(

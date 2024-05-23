@@ -154,27 +154,26 @@ if __name__ == '__main__':
     check_device(args)
     init_dirs(args)
 
-    match args.mode:
-        case 'train':
+    if args.mode == 'train':
             coca_train(args, carry_on=args.carry_on)
-        case 'compile_model':
+    elif args.mode == 'compile_model':
             compile_model(args)
-        case 'test_modules':
+    elif args.mode == 'test_modules':
             test_module(args)
-        case 'show_graphs':
-            if args.log_dir is None:
-                raise ValueError("The param '--log' is required!")
-            os.environ['CRYPTOGRAPHY_OPENSSL_NO_LEGACY'] = '1'
-            os.system(f"tensorboard --logdir {args.log_dir}")
-        case 'list_targets':
+    elif args.mode == 'show_graphs':
+        if args.log_dir is None:
+            raise ValueError("The param '--log' is required!")
+        os.environ['CRYPTOGRAPHY_OPENSSL_NO_LEGACY'] = '1'
+        os.system(f"tensorboard --logdir {args.log_dir}")
+    elif args.mode == 'list_targets':
             list_targets()
-        case 'train_submodel':
+    elif args.mode == 'train_submodel':
             submodel_train(args)
-        case 'infer_submodel':
+    elif args.mode == 'infer_submodel':
             submodel_infer(args)
-        case 'test_submodel':
+    elif args.mode == 'test_submodel':
             submodel_test(args)
-        case 'transfer_classifier_model':
+    elif args.mode == 'transfer_classifier_model':
             transfer_classifier_model(args)
-        case 'ciallo':
+    elif args.mode == 'ciallo':
             print("Ciallo～(∠・ω< )⌒☆")

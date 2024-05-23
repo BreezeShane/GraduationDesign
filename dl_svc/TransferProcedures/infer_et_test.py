@@ -87,13 +87,14 @@ def infer(args):
 #     else:
 #         model_dict = torch.load(model_path, map_location=torch.device('cpu'))
 #     try:
-#         match model_dict['name']:
-#             case 'coca_vit_l_14':
-#                 model = coca_vit_l_14()
-#             case 'coca_vit_b_32':
-#                 model = coca_vit_b_32()
-#             case 'coca_vit_custom':
-#                 model = coca_vit_custom()
+#         if model_dict['name'] == 'coca_vit_l_14':
+#             model = coca_vit_l_14()
+#         elif model_dict['name'] == 'coca_vit_b_32':
+#             model = coca_vit_b_32()
+#         elif model_dict['name'] == 'coca_vit_custom':
+#             model = coca_vit_custom()
+#         else:
+#             raise ValueError("Not supported model!")
 #     except KeyError as exc:
 #         raise KeyError(f"Not compatible model! Get model here: {model_path}") from exc
 

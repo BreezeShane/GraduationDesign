@@ -146,39 +146,38 @@ def tune_model(mod, target, params, tuner="xgb"):
 
 def get_tuner(tuner, task):
     """ Create Tuner """
-    match tuner:
-        case "xgb":
-            tuner_obj = XGBTuner(task, loss_type="reg")
-        case "xgb_knob":
-            tuner_obj = XGBTuner(task, loss_type="reg", feature_type="knob")
-        case "xgb_itervar":
-            tuner_obj = XGBTuner(task, loss_type="reg", feature_type="itervar")
-        case "xgb_curve":
-            tuner_obj = XGBTuner(task, loss_type="reg", feature_type="curve")
-        case "xgb_rank":
-            tuner_obj = XGBTuner(task, loss_type="rank")
-        case "xgb_rank_knob":
-            tuner_obj = XGBTuner(task, loss_type="rank", feature_type="knob")
-        case "xgb_rank_itervar":
-            tuner_obj = XGBTuner(task, loss_type="rank", feature_type="itervar")
-        case "xgb_rank_curve":
-            tuner_obj = XGBTuner(task, loss_type="rank", feature_type="curve")
-        case "xgb_rank_binary":
-            tuner_obj = XGBTuner(task, loss_type="rank-binary")
-        case "xgb_rank_binary_knob":
-            tuner_obj = XGBTuner(task, loss_type="rank-binary", feature_type="knob")
-        case "xgb_rank_binary_itervar":
-            tuner_obj = XGBTuner(task, loss_type="rank-binary", feature_type="itervar")
-        case "xgb_rank_binary_curve":
-            tuner_obj = XGBTuner(task, loss_type="rank-binary", feature_type="curve")
-        case "ga":
-            tuner_obj = GATuner(task, pop_size=50)
-        case "random":
-            tuner_obj = RandomTuner(task)
-        case "gridsearch":
-            tuner_obj = GridSearchTuner(task)
-        case _:
-            raise ValueError("Invalid tuner: " + tuner)
+    if tuner == "xgb":
+        tuner_obj = XGBTuner(task, loss_type="reg")
+    elif tuner == "xgb_knob":
+        tuner_obj = XGBTuner(task, loss_type="reg", feature_type="knob")
+    elif tuner == "xgb_itervar":
+        tuner_obj = XGBTuner(task, loss_type="reg", feature_type="itervar")
+    elif tuner == "xgb_curve":
+        tuner_obj = XGBTuner(task, loss_type="reg", feature_type="curve")
+    elif tuner == "xgb_rank":
+        tuner_obj = XGBTuner(task, loss_type="rank")
+    elif tuner == "xgb_rank_knob":
+        tuner_obj = XGBTuner(task, loss_type="rank", feature_type="knob")
+    elif tuner == "xgb_rank_itervar":
+        tuner_obj = XGBTuner(task, loss_type="rank", feature_type="itervar")
+    elif tuner == "xgb_rank_curve":
+        tuner_obj = XGBTuner(task, loss_type="rank", feature_type="curve")
+    elif tuner == "xgb_rank_binary":
+        tuner_obj = XGBTuner(task, loss_type="rank-binary")
+    elif tuner == "xgb_rank_binary_knob":
+        tuner_obj = XGBTuner(task, loss_type="rank-binary", feature_type="knob")
+    elif tuner == "xgb_rank_binary_itervar":
+        tuner_obj = XGBTuner(task, loss_type="rank-binary", feature_type="itervar")
+    elif tuner == "xgb_rank_binary_curve":
+        tuner_obj = XGBTuner(task, loss_type="rank-binary", feature_type="curve")
+    elif tuner == "ga":
+        tuner_obj = GATuner(task, pop_size=50)
+    elif tuner == "random":
+        tuner_obj = RandomTuner(task)
+    elif tuner == "gridsearch":
+        tuner_obj = GridSearchTuner(task)
+    else:
+        raise ValueError("Invalid tuner: " + tuner)
     return tuner_obj
         # dev = tvm.device(str(target), 0)
     # model.summary()

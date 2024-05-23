@@ -37,35 +37,34 @@ class Classifier(nn.Module):
 
         assert self.model_type in ["whole", "normal", "lora", "deepspeed"]
 
-        match self.model_type:
-            case "whole":
-                whole_state_dict = torch.load(pretrained_model_path, map_location=self.device)
+        if self.model_type == "whole":
+            whole_state_dict = torch.load(pretrained_model_path, map_location=self.device)
 
-                pretrained_model_dict = self.pretrained_model.state_dict()
-                load_dict = { k:v for k, v in whole_state_dict.items() if k in pretrained_model_dict.keys()}
-                pretrained_model_dict.update(load_dict)
+            pretrained_model_dict = self.pretrained_model.state_dict()
+            load_dict = { k:v for k, v in whole_state_dict.items() if k in pretrained_model_dict.keys()}
+            pretrained_model_dict.update(load_dict)
 
-                attn_pool_dict = self.attention_pooler.state_dict()
-                load_dict = { k:v for k, v in whole_state_dict.items() if k in attn_pool_dict.keys()}
-                attn_pool_dict.update(load_dict)
+            attn_pool_dict = self.attention_pooler.state_dict()
+            load_dict = { k:v for k, v in whole_state_dict.items() if k in attn_pool_dict.keys()}
+            attn_pool_dict.update(load_dict)
 
-                self.pretrained_model.load_state_dict(pretrained_model_dict)
-                self.attention_pooler.load_state_dict(attn_pool_dict)
-                self.pretrained_model.eval()
-                self.attention_pooler.eval()
-            case "normal":
-                trained_model = torch.load(pretrained_model_path, map_location=self.device)['model']
-                model_dict = self.pretrained_model.state_dict()
-                load_dict = { k:v for k, v in trained_model.items() if k in model_dict.keys()}
-                model_dict.update(load_dict)
-                self.pretrained_model.load_state_dict(model_dict)
-                self.pretrained_model.eval()
-            case "lora":
-                pass
-            case "deepspeed":
-                pass
-            case _:
-                raise ValueError("Wrong Model Type! Acceptable model types are normal, lora and deepspeed.")
+            self.pretrained_model.load_state_dict(pretrained_model_dict)
+            self.attention_pooler.load_state_dict(attn_pool_dict)
+            self.pretrained_model.eval()
+            self.attention_pooler.eval()
+        elif self.model_type == "normal":
+            trained_model = torch.load(pretrained_model_path, map_location=self.device)['model']
+            model_dict = self.pretrained_model.state_dict()
+            load_dict = { k:v for k, v in trained_model.items() if k in model_dict.keys()}
+            model_dict.update(load_dict)
+            self.pretrained_model.load_state_dict(model_dict)
+            self.pretrained_model.eval()
+        elif self.model_type == "lora":
+            pass
+        elif self.model_type == "deepspeed":
+            pass
+        else:
+            raise ValueError("Wrong Model Type! Acceptable model types are normal, lora and deepspeed.")
 
         for name, parameter in self.pretrained_model.named_parameters():
             parameter.requires_grad = False
