@@ -6,6 +6,7 @@
 <code>Insect-Identifier
 ├── Cargo.lock
 ├── Cargo.toml
+├── checkpoint
 ├── dl_svc
 │   ├── CoCa
 │   │   ├── coca_model.py
@@ -36,12 +37,15 @@
 │   ├── Masking
 │   │   └── random_masking.py
 │   ├── ModelTransfer
-│   │   └── Classifier.py
+│   │   ├── Classifier.py
+│   │   └── QuantModel.py
+│   ├── requirements.txt
 │   ├── TransferProcedures
 │   │   ├── compile_model.py
 │   │   ├── compile_utils.py
 │   │   ├── infer_by_tvm.py
 │   │   ├── infer_et_test.py
+│   │   ├── quantize_model.py
 │   │   └── train.py
 │   └── Utils
 │       ├── attention.py
@@ -89,7 +93,6 @@
 │   └── tsconfig.json
 ├── GraduationDesign.ipynb
 ├── README.md
-├── requirements.txt
 ├── src
 │   ├── authenticator.rs
 │   ├── config.rs
@@ -118,7 +121,7 @@
 │   └── config.cmake
 └── UpgradePip.py
 
-25 directories, 89 files</code>
+26 directories, 91 files</code>
 </pre>
 </details>
 
