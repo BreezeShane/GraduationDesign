@@ -8,6 +8,7 @@ TENSORBOARD_DATA_PATH = './log/'
 # CHECKPOINT_PATH = '/hy-tmp/checkpoint/'
 # TENSORBOARD_DATA_PATH = '../tf_logs/'
 COMPILED_MODEL_DIR = "./models/compiled/"
+QUANTIZED_MODEL_DIR = "./models/quantized/"
 MODEL_TUNING_JSON = "./models/compiled/Classifier-Autotuning.json"
 IMG_TYPE_LIST = {'jpg','bmp','png','jpeg','rgb','tif'}
 

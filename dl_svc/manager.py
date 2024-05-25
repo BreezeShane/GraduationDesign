@@ -11,20 +11,16 @@ import warnings
 from CoCaProcedures.train import train as coca_train
 from TransferProcedures.train import train as submodel_train
 from TransferProcedures.infer_et_test import test as submodel_test, infer as submodel_infer
+from TransferProcedures.quantize_model import quantize as quantize_submodel
 from TransferProcedures.compile_model import compile_model, test_module
 from TransferProcedures.compile_utils import transfer_classifier_model
-from config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH, COMPILED_MODEL_DIR
+from config import CHECKPOINT_PATH, TENSORBOARD_DATA_PATH, COMPILED_MODEL_DIR, QUANTIZED_MODEL_DIR
 
-def init_dirs(arguments):
+def init_dirs(dir_list: list):
     """ Initialize the directories needed. """
-    __create_dir(arguments.mod_path)
-    __create_dir(CHECKPOINT_PATH)
-    __create_dir(TENSORBOARD_DATA_PATH)
-    __create_dir(COMPILED_MODEL_DIR)
-
-def __create_dir(dir_path):
-    if not os.path.exists(dir_path):
-        os.mkdir(dir_path)
+    for dir_path in dir_list:
+        if not os.path.exists(dir_path):
+            os.mkdir(dir_path)
 
 def check_device(arguments):
     """ Check if the device going to use available. """
@@ -72,7 +68,7 @@ if __name__ == '__main__':
         choices=[
             'train', 'compile_model', 'test_modules',
             'show_graphs', 'list_targets',
-            'train_submodel', 'infer_submodel', 'test_submodel',
+            'train_submodel', 'infer_submodel', 'test_submodel', 'quantize_submodel',
             'transfer_classifier_model',
             'ciallo'
         ],
@@ -105,6 +101,18 @@ if __name__ == '__main__':
         help="Apply to use DeepSpeed.")
     train_group_parser.add_argument('--use_lora', action='store_true', default=False,
         help="Apply to use Low-Rank Adaptation, which known as LoRA.")
+
+    # mode quantize_model
+    quantize_group_parser = parser.add_argument_group(title='Quantize Mode')
+    # -------------------------------------------------------------------- #
+    quantize_group_parser.add_argument('--qset', type=str,
+        help="The path to folder containing training dataset for evaluating data distribution to quantize the model. ")
+    quantize_group_parser.add_argument('--qmodel', type=str,
+        help="The path to the pretrained model for quantization. ")
+    quantize_group_parser.add_argument('--qtarget', type=str, choices=["x86", "arm"], default="x86",
+        help="The target platform to run as server. ")
+    quantize_group_parser.add_argument('--qsave', type=str,
+        help="The path to folder for saving the quantized Pytorch model and quantized TorchScript model. ")
 
     # mode compile_model
     compile_group_parser = parser.add_argument_group(title='Compile Mode')
@@ -152,7 +160,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     check_device(args)
-    init_dirs(args)
+    init_dirs([
+        args.mod_path,
+        CHECKPOINT_PATH,
+        TENSORBOARD_DATA_PATH,
+        COMPILED_MODEL_DIR,
+        QUANTIZED_MODEL_DIR
+    ])
 
     if args.mode == 'train':
             coca_train(args, carry_on=args.carry_on)
@@ -166,14 +180,16 @@ if __name__ == '__main__':
         os.environ['CRYPTOGRAPHY_OPENSSL_NO_LEGACY'] = '1'
         os.system(f"tensorboard --logdir {args.log_dir}")
     elif args.mode == 'list_targets':
-            list_targets()
+        list_targets()
     elif args.mode == 'train_submodel':
-            submodel_train(args)
+        submodel_train(args)
     elif args.mode == 'infer_submodel':
-            submodel_infer(args)
+        submodel_infer(args)
     elif args.mode == 'test_submodel':
-            submodel_test(args)
+        submodel_test(args)
+    elif args.mode == 'quantize_submodel':
+        quantize_submodel(args)
     elif args.mode == 'transfer_classifier_model':
-            transfer_classifier_model(args)
+        transfer_classifier_model(args)
     elif args.mode == 'ciallo':
             print("Ciallo～(∠・ω< )⌒☆")
