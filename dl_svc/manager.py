@@ -74,7 +74,7 @@ if __name__ == '__main__':
         ],
         help="Toggle to the mode you want to run.")
     parser.add_argument('--device', '-d', help="The GPU id to use.")
-    parser.add_argument('--log', dest='log_dir', help='Run tensorboard to show graphs.')
+    parser.add_argument('--log', dest='log_dir', default=TENSORBOARD_DATA_PATH, help='Run tensorboard to show graphs.')
 
 
     # mode train
@@ -111,7 +111,7 @@ if __name__ == '__main__':
         help="The path to the pretrained model for quantization. ")
     quantize_group_parser.add_argument('--qtarget', type=str, choices=["x86", "arm"], default="x86",
         help="The target platform to run as server. ")
-    quantize_group_parser.add_argument('--qsave', type=str,
+    quantize_group_parser.add_argument('--qsave', type=str, default=QUANTIZED_MODEL_DIR,
         help="The path to folder for saving the quantized Pytorch model and quantized TorchScript model. ")
 
     # mode compile_model
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     # see https://tvm.apache.org/docs/reference/api/python/target.html#module-tvm.target for detals.
     compile_group_parser.add_argument('--target', type=str, choices=Target.list_kinds(),
         help="Select the compile target. Run `python manager.py list_targets` for details.")
-    compile_group_parser.add_argument('--save_path', type=str,
+    compile_group_parser.add_argument('--save_path', type=str, default=COMPILED_MODEL_DIR,
         help="The path to save the compiled model.")
     compile_group_parser.add_argument('--ts', type=str,
         help="Set True if pretrained model is TorchScript model.")
@@ -175,8 +175,6 @@ if __name__ == '__main__':
     elif args.mode == 'test_modules':
             test_module(args)
     elif args.mode == 'show_graphs':
-        if args.log_dir is None:
-            raise ValueError("The param '--log' is required!")
         os.environ['CRYPTOGRAPHY_OPENSSL_NO_LEGACY'] = '1'
         os.system(f"tensorboard --logdir {args.log_dir}")
     elif args.mode == 'list_targets':
