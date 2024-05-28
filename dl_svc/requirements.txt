@@ -1,14 +1,14 @@
-iopath==0.1.10
-numpy==1.26.4
-peft==0.10.0
-Pillow==10.0.1
-tensorboard==2.15.2
-torch==2.2.1
-torchvision==0.17.1
-tqdm==4.66.2
-deepspeed==0.14.0
-yacs==0.1.8
-torchinfo==1.8.0
+iopath
+numpy
+peft
+Pillow
+tensorboard
+torch
+torchvision
+tqdm
+deepspeed
+yacs
+torchinfo
 # TVM 0.17.dev0 Dependencies
 decorator
 attrs
@@ -19,4 +19,4 @@ cloudpickle
 # Peft-LoRA
 
 # DeepSpeed
-mpi4py
+# mpi4py
